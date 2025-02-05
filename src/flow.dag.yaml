@@ -7,10 +7,13 @@ inputs:
     default: /Users/00153837yeohyihang/Desktop/Code/current-working/llm-framework/src/test_sample/sample01.pdf
   ocr_strategy:
     type: string
-    default: simple #or vision_llm, simple, doctr, easy_ocr
+    default: vision_llm #or vision_llm, simple, doctr, easy_ocr
   output_format:
     type: string
     default: json
+  callback_url:
+    type: string
+    default: https://webhook.site/04e1fcfa-0433-4db2-9817-a4d761480aab
 outputs:
   payload_path:
     type: string
@@ -21,6 +24,9 @@ outputs:
   json_schema:
     type: string
     reference: ${extract_schema.output}
+  raw_ocr_result:
+    type: string
+    reference: ${perform_ocr.output}
 
 nodes:
   - name: load_document

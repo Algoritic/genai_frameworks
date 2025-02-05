@@ -1,9 +1,12 @@
 import tempfile
 import easyocr
 import pymupdf
+from data_models.generic import KeyValueList
+from llms.azure_llm import AzureLLM
 from processors.file_processor import get_file_mimetype
 from doctr.models import ocr_predictor
 from doctr.io import DocumentFile
+from core.settings import app_settings
 
 
 def use_easy_ocr(bytes: bytes) -> str:
@@ -17,6 +20,36 @@ def use_doctr(path: str) -> str:
     doc = DocumentFile.from_images(path)
     result = predictor(doc)
     return result.render()
+
+
+def use_vision_llm(bytes: bytes) -> str:
+    llm = AzureLLM(app_settings.azure)
+    result = llm.generate_from_image(
+        image_bytes=bytes,
+        prompt={
+            "user":
+            """Please look at this image and extract all the text content.
+                Provide the output as plain text, maintaining the original layout and line breaks where appropriate.
+                Include all visible text from the image."""
+        },
+        params={"detail": "high"})
+    return result
+    # result = llm.generate_structured_model_from_image(
+    #     image_bytes=bytes,
+    #     response_model=KeyValueList,
+    #     prompt={
+    #         "user":
+    #         """You are a professional Document Extractor.
+    #         You must
+    #         - Identify different sections or components
+    #         - Use appropriate keys for different text elements
+    #         - Maintain the hierarchical structure of the content
+    #         - Include all visible text from the image
+    #         Extract every single key values from the following form. Read from left to right. Be concise."""
+    #     },
+    #     params={"details": "high"})
+
+    # return result.model_dump_json()
 
 
 #file can be pdf or image

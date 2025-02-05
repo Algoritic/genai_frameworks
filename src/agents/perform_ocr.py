@@ -1,7 +1,7 @@
 import os
 from promptflow.core import tool
 
-from tools.ocr import simple_pdf_ocr, use_doctr, use_easy_ocr
+from tools.ocr import simple_pdf_ocr, use_doctr, use_easy_ocr, use_vision_llm
 
 
 @tool
@@ -15,4 +15,7 @@ async def perform_ocr(folder_path: str, ocr_strategy: str):
                 page_text += use_doctr(f.name)
             if ocr_strategy == "simple":
                 page_text += simple_pdf_ocr(f.read())
+            if ocr_strategy == "vision_llm":
+                page_text += use_vision_llm(f.read())
+
     return page_text
