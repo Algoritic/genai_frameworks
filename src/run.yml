@@ -1,0 +1,7 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Run.schema.json
+flow: ./flow.dag.yaml
+data: ./data.jsonl
+column_mapping:
+  input_file: ${data.input_file}
+  ocr_strategy: ${data.ocr_strategy}
+  output_format: ${data.output_format}

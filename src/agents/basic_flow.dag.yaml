@@ -1,0 +1,94 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+environment:
+  python_requirements_txt: requirements.txt
+additional_includes:
+  - ../processors/file_processor.py
+inputs:
+  chat_history:
+    type: list
+    # default:
+    #   - inputs:
+    #       question: What is the weather like in Boston?
+    #     outputs:
+    #       answer: '{"forecast":["sunny","windy"],"location":"Boston","temperature":"72","unit":"fahrenheit"}'
+    #       llm_output:
+    #         content: null
+    #         function_call:
+    #           name: get_current_weather
+    #           arguments: |-
+    #             {
+    #               "location": "Boston"
+    #             }
+    #         role: assistant
+    is_chat_history: true
+  question:
+    type: string
+    default: How about London next week?
+    is_chat_input: true
+  session_id:
+    type: string
+    default: 0
+
+outputs:
+  answer:
+    type: string
+    reference: ${chat_ollama.output}
+    is_chat_output: true
+    default: "Good!"
+  last_k_chat_history:
+    type: list
+    reference: ${update_chat_history.output.last_k_chat_history}
+  summarized:
+    type: string
+    reference: ${summarizer.output}
+  memory:
+    type: string
+    reference: ${search_memory.output}
+
+nodes:
+  - inputs:
+      session_id: ${inputs.session_id}
+      question: ${inputs.question}
+      chat_history: ${inputs.chat_history}
+    name: update_chat_history
+    type: python
+    source:
+      type: code
+      path: update_chat_history.py
+
+  - name: update_memory
+    inputs:
+      session_id: ${inputs.session_id}
+      question: ${inputs.question}
+    type: python
+    source:
+      type: code
+      path: update_memory.py
+
+  - name: summarizer
+    inputs:
+      chat_history: ${update_chat_history.output.last_k_chat_history}
+    type: python
+    source:
+      type: code
+      path: summarizer.py
+
+  - name: search_memory
+    inputs:
+      session_id: ${inputs.session_id}
+      question: ${inputs.question}
+    type: python
+    source:
+      type: code
+      path: search_memory.py
+
+  - name: chat_ollama
+    inputs:
+      session_id: ${inputs.session_id}
+      question: ${inputs.question}
+      context: ${summarizer.output}
+      memory: ${search_memory.output}
+    type: python
+    source:
+      type: code
+      path: chat_ollama.py

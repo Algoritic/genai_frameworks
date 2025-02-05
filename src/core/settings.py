@@ -1,0 +1,79 @@
+import os
+from typing import Optional
+
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DOTENV_PATH = os.environ.get(
+    "DOTENV_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+
+
+class _LoggerSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="LOGGER_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+    app_log_path: Optional[str] = 'app.log'
+    llm_log_path: Optional[str] = 'llm.txt'
+
+
+class AzureSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="AZURE_OPENAI_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+    base: str
+    model: str
+    max_tokens: int
+    api_key: str
+    version: str
+    model_deployment: str
+    temperature: Optional[float] = 0
+    embedding_model: Optional[str]
+    embedding_version: Optional[str]
+    embedding_base: Optional[str]
+    embedding_api_key: Optional[str]
+
+
+class _RedisSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="REDIS_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+
+    url: str
+    ttl: int
+
+
+class OllamaSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="OLLAMA_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+    model: str
+    temperature: Optional[float] = 0
+    base_url: str
+    api_key: str
+
+
+class _BaseSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      extra="ignore",
+                                      arbitrary_types_allowed=True,
+                                      env_ignore_empty=True)
+    sanitize_answer: bool = False
+
+
+class _AppSettings(BaseModel):
+    logger: _LoggerSettings = _LoggerSettings()
+    azure: AzureSettings = AzureSettings()
+    redis: _RedisSettings = _RedisSettings()
+    ollama: OllamaSettings = OllamaSettings()
+
+
+app_settings = _AppSettings()

@@ -1,0 +1,45 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+environment:
+  python_requirements_txt: requirements.txt
+inputs:
+  input_file:
+    type: string #local file path
+    default: /Users/00153837yeohyihang/Desktop/Code/current-working/llm-framework/src/test_sample/sample01.pdf
+  ocr_strategy:
+    type: string
+    default: vision_llm #or llama_vision, doctr, gpt-vision
+  available_tags:
+    type: string
+
+outputs:
+  payload_path:
+    type: string
+    reference: ${load_document.output}
+  tagging_result:
+    type: string
+    reference: ${classify_document.output}
+
+nodes:
+  - name: load_document
+    type: python
+    source:
+      type: code
+      path: ./agents/load_file.py
+    inputs:
+      file_path: ${inputs.input_file}
+  - name: optimize_image
+    type: python
+    source:
+      type: code
+      path: ./agents/optimize_image.py
+    inputs:
+      folder_path: ${load_document.output}
+  - name: classify_document
+    type: python
+    source:
+      type: code
+      path: ./agents/classify_document.py
+    inputs:
+      folder_path: ${optimize_image.output}
+      ocr_strategy: ${inputs.ocr_strategy}
+      available_tags: ${inputs.available_tags}
