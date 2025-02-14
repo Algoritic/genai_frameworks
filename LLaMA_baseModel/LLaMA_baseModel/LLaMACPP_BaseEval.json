@@ -1,0 +1,31 @@
+{
+    "llm_response": {
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "Hello! It's nice to meet you. How can I assist you today?<|eot_id|>",
+                    "role": "assistant"
+                }
+            }
+        ],
+        "created": 1739410698,
+        "id": "chatcmpl-bQ8E23JRkDYhExwe2aSJs4s7qeoyxkNw",
+        "model": "LLaMA_CPP",
+        "object": "chat.completion",
+        "usage": {
+            "completion_tokens": 17,
+            "prompt_tokens": 33,
+            "total_tokens": 50
+        }
+    },
+    "evaluation_metrics": {
+        "perplexity": 44.96510314941406,
+        "confidence": 1.0,
+        "relevance": 0.3234848976135254,
+        "coherence": 0.3234848976135254,
+        "hallucination_rate": 0,
+        "latency": 0.4585578441619873
+    }
+}
