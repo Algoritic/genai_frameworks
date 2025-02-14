@@ -15,7 +15,8 @@ class _LoggerSettings(BaseSettings):
                                       env_prefix="LOGGER_",
                                       extra="ignore",
                                       env_ignore_empty=True)
-    app_log_path: Optional[str] = 'app.log'
+    log_file: Optional[str] = 'app.log'
+    log_level: Optional[str] = 'INFO'
     llm_log_path: Optional[str] = 'llm.txt'
 
 
@@ -59,6 +60,15 @@ class OllamaSettings(BaseSettings):
     temperature: Optional[float] = 0
     base_url: str
     api_key: str
+
+
+class EvalSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="EVAL_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+    relevancy_threshold: float
 
 
 class _BaseSettings(BaseSettings):

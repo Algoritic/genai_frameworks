@@ -1,14 +1,14 @@
 import logging
-from core.config import LOG_FILE, LOG_LEVEL
+from core.settings import app_settings
 
 
 def setup_logger():
     logger = logging.getLogger("LLMFramework")
-    logger.setLevel(getattr(logging, LOG_LEVEL))
+    logger.setLevel(getattr(logging, app_settings.logger.log_level))
 
     # File Handler
-    file_handler = logging.FileHandler(LOG_FILE)
-    file_handler.setLevel(getattr(logging, LOG_LEVEL))
+    file_handler = logging.FileHandler(app_settings.logger.log_file)
+    file_handler.setLevel(getattr(logging, app_settings.logger.log_level))
 
     # Formatter
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')

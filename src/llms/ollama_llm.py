@@ -1,8 +1,11 @@
 import base64
 import json
+import os
+from pathlib import Path
 import instructor
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
+from callbacks.confident_callback import DeepEvalCallbackHandler
 from core.logger import logger
 from core.settings import OllamaSettings
 from llms.llm import LLMBase
@@ -15,6 +18,9 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain_core.messages import HumanMessage
 
+from deepeval.metrics import AnswerRelevancyMetric, TaskCompletionMetric, ToxicityMetric, BiasMetric, PromptAlignmentMetric
+from deepeval.models.gpt_model import GPTModel
+
 
 class OllamaLLM(LLMBase):
 
@@ -24,13 +30,53 @@ class OllamaLLM(LLMBase):
                  model=None,
                  **kwargs):
         super().__init__()
+        #compose JSON file for deepeval with extension ".deepeval"
+        # self.deepeval_config = {
+        #     "LOCAL_MODEL_NAME": model if model else config.model,
+        #     "LOCAL_MODEL_BASE_URL": config.base_url,
+        #     "LOCAL_MODEL_API_KEY": config.api_key,
+        #     "LOCAL_MODEL_FORMAT": "json",
+        #     "USE_LOCAL_MODEL": "YES",
+        #     "USE_AZURE_OPENAI": "NO"
+        # }
+        # root_path = Path(os.path.dirname(
+        #     os.path.abspath(__file__))).parent.parent
+        # deepeval_config_path = os.path.join(root_path, ".deepeval")
+        # with open(deepeval_config_path, "w") as f:
+        #     json.dump(self.deepeval_config, f)
+
         self.parser = JsonOutputParser()
         self.config = config
+        # GPTModel(
+        #         model=model if model else config.model,
+        #         _openai_api_key=config.api_key,
+        #         base_url=config.base_url,
+        #     )
+        answer_relevancy_metric = AnswerRelevancyMetric(threshold=0.7,
+                                                        model="gpt-4o",
+                                                        include_reason=False)
+
+        toxicity_metric = ToxicityMetric(threshold=0.7,
+                                         model="gpt-4o",
+                                         include_reason=False)
+        bias_metric = BiasMetric(threshold=0.7,
+                                 model="gpt-4o",
+                                 include_reason=False)
+        deepeval_callback = DeepEvalCallbackHandler(
+            implementation_name=f"ollama {model if model else config.model}",
+            logger=logger,
+            metrics=[
+                answer_relevancy_metric,
+                toxicity_metric,
+                bias_metric,
+            ])
         self.model = ChatOllama(
             cache=cache,
             model=model if model else config.model,
             temperature=config.temperature,
-            callbacks=[LoggingCallbackHandler(logger=logger)],
+            callbacks=[
+                LoggingCallbackHandler(logger=logger), deepeval_callback
+            ],
         )
 
     def generate(self, prompt: dict[str, str], params=None, **kwargs):

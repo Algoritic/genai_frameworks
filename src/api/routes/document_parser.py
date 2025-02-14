@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, Form, UploadFile, BackgroundTasks
 import httpx
 from promptflow.client import load_flow
+import json_repair
 
 # from src.processors.file_processor import batch_optimize_image, pdf_to_images
 # from src.tools.ocr import simple_pdf_ocr, use_easy_ocr
@@ -24,10 +25,15 @@ document_parser_router = APIRouter(
 
 async def send_webhook(webhook_url, result):
     async with httpx.AsyncClient() as client:
+        print("sending webhook")
         await client.post(webhook_url, json={"result": result})
 
 
-async def load_and_run_flow(flow_path, webhook_url, file_name, output_format):
+async def load_and_run_flow(flow_path,
+                            webhook_url,
+                            file_name,
+                            output_format="json",
+                            json_schema=None):
     loop = asyncio.get_running_loop()
     f = await loop.run_in_executor(None, load_flow,
                                    flow_path)  # Load flow in a separate thread
@@ -42,16 +48,20 @@ async def load_and_run_flow(flow_path, webhook_url, file_name, output_format):
     await send_webhook(webhook_url, result)
 
 
-async def process_file(file: UploadFile, flow_path: str,
-                       background_tasks: BackgroundTasks, output_format: str):
+async def process_file(file: UploadFile,
+                       flow_path: str,
+                       background_tasks: BackgroundTasks,
+                       output_format: str,
+                       json_schema: str = None,
+                       callback_url: str = None):
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_file.write(file.file.read())
         temp_file.seek(0)
 
         background_tasks.add_task(
             load_and_run_flow, flow_path,
-            "https://webhook.site/04e1fcfa-0433-4db2-9817-a4d761480aab",
-            temp_file.name, output_format)
+            "https://webhook.site/1accd4fd-5d0a-4748-a8e1-3a04662428e6",
+            temp_file.name, output_format, json_schema)
 
 
 #output format: json, key-value
@@ -63,6 +73,7 @@ async def document_parser(
         background_tasks: BackgroundTasks,
         output_format: Annotated[str, Form()] = "json",
         #optional json_schema
+        callback_url: Annotated[str, Form()] = None,
         json_schema: Annotated[str, Form()] = None,
         unique_identifier: Annotated[str, Form()] = None):
     if not files or len(files) == 0:
@@ -70,8 +81,9 @@ async def document_parser(
 
     if json_schema is not None:
         try:
+
             jsonschema.Draft202012Validator.check_schema(
-                json.loads(json_schema))
+                json_repair.loads(json_schema))
         except jsonschema.SchemaError as e:
             return {"message": "Invalid JSON schema: " + str(e)}
 
@@ -79,8 +91,8 @@ async def document_parser(
     flow_path = os.path.join(root_path, "flow.dag.yaml")
     tasks = [
         asyncio.create_task(
-            process_file(file, flow_path, background_tasks, output_format))
-        for file in files
+            process_file(file, flow_path, background_tasks, output_format,
+                         json_schema, callback_url)) for file in files
     ]
     await asyncio.gather(*tasks)
 

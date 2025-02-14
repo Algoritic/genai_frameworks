@@ -1,4 +1,4 @@
-from decouple import config
+# from decouple import config
 
 # Bing API Configuration
 # BING_API_KEY = config('BING_API_KEY')
@@ -27,8 +27,8 @@ from decouple import config
 # SCHEDULE_TIME = config('SCHEDULE_TIME', default='08:00')
 
 # Logging Configuration
-LOG_FILE = config('LOG_FILE', default='app.log')
-LOG_LEVEL = config('LOG_LEVEL', default='INFO')
+# LOG_FILE = config('LOG_FILE', default='app.log')
+# LOG_LEVEL = config('LOG_LEVEL', default='INFO')
 
 # Redis
 # REDIS_HOST = config('REDIS_HOST', default='localhost')

@@ -1,4 +1,3 @@
-import shutil
 from promptflow.core import tool
 
 from processors.file_processor import pdf_to_images
