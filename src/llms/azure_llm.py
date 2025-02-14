@@ -1,5 +1,7 @@
 import base64
 import json
+import os
+from pathlib import Path
 import instructor
 from langchain_openai import AzureChatOpenAI
 from pydantic import BaseModel
@@ -19,6 +21,7 @@ class AzureLLM(LLMBase):
 
     def __init__(self, config: AzureSettings):
         super().__init__()
+
         self.parser = JsonOutputParser()
         self.config = config
         self.model = AzureChatOpenAI(
@@ -30,6 +33,20 @@ class AzureLLM(LLMBase):
             max_tokens=config.max_tokens,
             temperature=config.temperature,
             callbacks=[LoggingCallbackHandler(logger=logger)])
+
+        # self.deepeval_config = {
+        #     "AZURE_OPENAI_API_KEY": config.api_key,
+        #     "AZURE_OPENAI_ENDPOINT": config.base,
+        #     "OPENAI_API_VERSION": config.version,
+        #     "AZURE_DEPLOYMENT_NAME": config.model_deployment,
+        #     "USE_AZURE_OPENAI": "YES",
+        #     "USE_LOCAL_MODEL": "NO"
+        # }
+        # root_path = Path(os.path.dirname(
+        #     os.path.abspath(__file__))).parent.parent
+        # deepeval_config_path = os.path.join(root_path, ".deepeval")
+        # with open(deepeval_config_path, "w") as f:
+        #     json.dump(self.deepeval_config, f)
 
     def generate(self, prompt: dict[str, str], params=None, **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
