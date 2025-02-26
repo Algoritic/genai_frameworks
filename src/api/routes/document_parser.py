@@ -38,7 +38,11 @@ async def load_and_run_flow(flow_path,
     f = await loop.run_in_executor(None, load_flow,
                                    flow_path)  # Load flow in a separate thread
     result = await loop.run_in_executor(
-        None, functools.partial(f, input_file=file_name)
+        None,
+        functools.partial(f,
+                          input_file=file_name,
+                          use_schema=False if json_schema is None else True,
+                          json_schema=json_schema)
     )  # Execute the loaded function concurrently
 
     #delete the file
@@ -54,13 +58,15 @@ async def process_file(file: UploadFile,
                        output_format: str,
                        json_schema: str = None,
                        callback_url: str = None):
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+    file_ext = file.filename.split(".")[-1]
+    with tempfile.NamedTemporaryFile(delete=False,
+                                     suffix=f".{file_ext}") as temp_file:
         temp_file.write(file.file.read())
         temp_file.seek(0)
 
         background_tasks.add_task(
             load_and_run_flow, flow_path,
-            "https://webhook.site/1accd4fd-5d0a-4748-a8e1-3a04662428e6",
+            "https://webhook.site/2314d19d-bd31-4e26-bcda-a78f4d1095b6",
             temp_file.name, output_format, json_schema)
 
 
@@ -80,10 +86,12 @@ async def document_parser(
         return {"message": "No upload files sent"}
 
     if json_schema is not None:
-        try:
+        json_data = json_repair.loads(json_schema)
+        json_string = json.dumps(json_data, indent=0, separators=(",", ":"))
 
+        try:
             jsonschema.Draft202012Validator.check_schema(
-                json_repair.loads(json_schema))
+                json_repair.loads(json_string))
         except jsonschema.SchemaError as e:
             return {"message": "Invalid JSON schema: " + str(e)}
 
@@ -92,7 +100,7 @@ async def document_parser(
     tasks = [
         asyncio.create_task(
             process_file(file, flow_path, background_tasks, output_format,
-                         json_schema, callback_url)) for file in files
+                         json_string, callback_url)) for file in files
     ]
     await asyncio.gather(*tasks)
 

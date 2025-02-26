@@ -5,7 +5,7 @@ from pathlib import Path
 import instructor
 from langchain_openai import AzureChatOpenAI
 from pydantic import BaseModel
-from core.settings import AzureSettings
+from core.settings import AzureOpenAISettings
 from llms.llm import LLMBase
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain.callbacks.tracers.logging import LoggingCallbackHandler
@@ -19,7 +19,7 @@ from langchain_core.prompts import MessagesPlaceholder
 
 class AzureLLM(LLMBase):
 
-    def __init__(self, config: AzureSettings):
+    def __init__(self, config: AzureOpenAISettings):
         super().__init__()
 
         self.parser = JsonOutputParser()
@@ -33,20 +33,6 @@ class AzureLLM(LLMBase):
             max_tokens=config.max_tokens,
             temperature=config.temperature,
             callbacks=[LoggingCallbackHandler(logger=logger)])
-
-        # self.deepeval_config = {
-        #     "AZURE_OPENAI_API_KEY": config.api_key,
-        #     "AZURE_OPENAI_ENDPOINT": config.base,
-        #     "OPENAI_API_VERSION": config.version,
-        #     "AZURE_DEPLOYMENT_NAME": config.model_deployment,
-        #     "USE_AZURE_OPENAI": "YES",
-        #     "USE_LOCAL_MODEL": "NO"
-        # }
-        # root_path = Path(os.path.dirname(
-        #     os.path.abspath(__file__))).parent.parent
-        # deepeval_config_path = os.path.join(root_path, ".deepeval")
-        # with open(deepeval_config_path, "w") as f:
-        #     json.dump(self.deepeval_config, f)
 
     def generate(self, prompt: dict[str, str], params=None, **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
@@ -75,7 +61,9 @@ class AzureLLM(LLMBase):
                             **kwargs):
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
         chat_template = ChatPromptTemplate.from_messages([
-            ("system", prompt.get("system", "Tell me what you see.")),
+            ("system",
+             prompt.get("system",
+                        "You are a helpful assistant. Tell me what you see.")),
             MessagesPlaceholder("msg"),
         ])
         messages = chat_template.invoke({
@@ -102,7 +90,9 @@ class AzureLLM(LLMBase):
                                    **kwargs):
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
         chat_template = ChatPromptTemplate.from_messages([
-            ("system", prompt.get("system", "Tell me what you see.")),
+            ("system",
+             prompt.get("system",
+                        "You are a helpful assistant. Tell me what you see.")),
             MessagesPlaceholder("msg"),
         ])
         messages = chat_template.invoke({
@@ -265,6 +255,7 @@ class AzureLLM(LLMBase):
 
     def generate_structured_schema(self,
                                    json_schema,
+                                   method="json_mode",
                                    prompt: dict[str, str] = None,
                                    params=None,
                                    **kwargs):
@@ -274,12 +265,13 @@ class AzureLLM(LLMBase):
         ])
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
-        response = self.model.with_structured_output(json_schema).invoke(
-            messages, **kwargs)
+        response = self.model.with_structured_output(
+            method=method, schema=json_schema).invoke(messages, **kwargs)
         return response
 
     async def agenerate_structured_schema(self,
                                           json_schema,
+                                          method="json_mode",
                                           prompt: dict[str, str] = None,
                                           params=None,
                                           **kwargs):
@@ -290,7 +282,7 @@ class AzureLLM(LLMBase):
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
         response = await self.model.with_structured_output(
-            json_schema).ainvoke(messages, **kwargs)
+            method=method, schema=json_schema).ainvoke(messages, **kwargs)
         return response
 
     def generate_structured_schema_from_image(self,

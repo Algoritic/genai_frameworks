@@ -6,10 +6,17 @@ from promptflow.core import tool
 from core.settings import app_settings
 from llms.ollama_llm import OllamaLLM
 from tools.parsers import JSONSchemaParser
+from core.logger import logger
 
 
 @tool
-async def extract_schema(ocr_output: str):
+async def extract_schema(ocr_output: str,
+                         use_schema: bool,
+                         json_schema: str = None):
+    if (use_schema is True):
+        logger.info("Using provided schema")
+        logger.info("Schema: %s" % json_schema)
+        return json_schema
     llm = OllamaLLM(app_settings.ollama,
                     log_file_path=app_settings.logger.llm_log_path)
     root_path = Path(os.path.dirname(os.path.abspath(__file__))).parent
@@ -26,9 +33,9 @@ async def extract_schema(ocr_output: str):
         loader=jinja2.FileSystemLoader(prompt_template_path))
     template = environment.get_template("json_schema_extraction.jinja")
     prompt = template.render(ocr_output=ocr_output)
-    json_schema = llm.generate_json(prompt={
+    j_schema = llm.generate_json(prompt={
         "system": "You are an intelligent extractor",
         "user": prompt
     },
-                                    parser=parse_with_retry)
-    return json_schema
+                                 parser=parse_with_retry)
+    return j_schema

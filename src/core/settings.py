@@ -20,7 +20,7 @@ class _LoggerSettings(BaseSettings):
     llm_log_path: Optional[str] = 'llm.txt'
 
 
-class AzureSettings(BaseSettings):
+class AzureOpenAISettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=DOTENV_PATH,
                                       env_file_encoding="utf-8",
                                       env_prefix="AZURE_OPENAI_",
@@ -37,6 +37,17 @@ class AzureSettings(BaseSettings):
     embedding_version: Optional[str]
     embedding_base: Optional[str]
     embedding_api_key: Optional[str]
+
+
+class AzureDocumentIntelligenceSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=DOTENV_PATH,
+        env_file_encoding="utf-8",
+        env_prefix="AZURE_DOCUMENT_INTELLIGENCE_",
+        extra="ignore",
+        env_ignore_empty=True)
+    api_key: str
+    endpoint: str
 
 
 class _RedisSettings(BaseSettings):
@@ -81,9 +92,11 @@ class _BaseSettings(BaseSettings):
 
 class _AppSettings(BaseModel):
     logger: _LoggerSettings = _LoggerSettings()
-    azure: AzureSettings = AzureSettings()
+    azure_openai: AzureOpenAISettings = AzureOpenAISettings()
     redis: _RedisSettings = _RedisSettings()
     ollama: OllamaSettings = OllamaSettings()
+    azure_document_intelligence: AzureDocumentIntelligenceSettings = AzureDocumentIntelligenceSettings(
+    )
 
 
 app_settings = _AppSettings()

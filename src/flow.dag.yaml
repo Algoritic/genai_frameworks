@@ -5,15 +5,23 @@ inputs:
   input_file:
     type: string #local file path
     default: /Users/00153837yeohyihang/Desktop/Code/current-working/llm-framework/src/test_sample/sample01.pdf
+  inference_strategy:
+    type: string
+    default: vision_llm
   ocr_strategy:
     type: string
-    default: vision_llm #or vision_llm, simple, doctr, easy_ocr
+    default: azure_document_intelligence #or vision_llm, simple, doctr, easy_ocr, azure_document_intelligence
   output_format:
     type: string
     default: json
   callback_url:
     type: string
-    default: https://webhook.site/04e1fcfa-0433-4db2-9817-a4d761480aab
+    default: https://webhook.site/1accd4fd-5d0a-4748-a8e1-3a04662428e6
+  json_schema:
+    type: string
+  use_schema:
+    type: bool
+    default: false
 outputs:
   payload_path:
     type: string
@@ -53,11 +61,16 @@ nodes:
       ocr_strategy: ${inputs.ocr_strategy}
   - name: extract_schema
     type: python
+    # activate:
+    #   when: ${inputs.use_schema}
+    #   is: false
     source:
       type: code
       path: ./agents/extract_schema.py
     inputs:
       ocr_output: ${perform_ocr.output}
+      json_schema: ${inputs.json_schema}
+      use_schema: ${inputs.use_schema}
   - name: extract_text
     type: python
     source:

@@ -1,7 +1,5 @@
 import base64
 import json
-import os
-from pathlib import Path
 import instructor
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
@@ -17,41 +15,25 @@ from langchain.output_parsers import RetryOutputParser
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain_core.messages import HumanMessage
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 
-from deepeval.metrics import AnswerRelevancyMetric, TaskCompletionMetric, ToxicityMetric, BiasMetric, PromptAlignmentMetric
-from deepeval.models.gpt_model import GPTModel
+from deepeval.metrics import AnswerRelevancyMetric, ToxicityMetric, BiasMetric
 
 
 class OllamaLLM(LLMBase):
 
+    #TODO: Accept eval metrics
     def __init__(self,
                  config: OllamaSettings,
                  cache=None,
                  model=None,
                  **kwargs):
+
         super().__init__()
-        #compose JSON file for deepeval with extension ".deepeval"
-        # self.deepeval_config = {
-        #     "LOCAL_MODEL_NAME": model if model else config.model,
-        #     "LOCAL_MODEL_BASE_URL": config.base_url,
-        #     "LOCAL_MODEL_API_KEY": config.api_key,
-        #     "LOCAL_MODEL_FORMAT": "json",
-        #     "USE_LOCAL_MODEL": "YES",
-        #     "USE_AZURE_OPENAI": "NO"
-        # }
-        # root_path = Path(os.path.dirname(
-        #     os.path.abspath(__file__))).parent.parent
-        # deepeval_config_path = os.path.join(root_path, ".deepeval")
-        # with open(deepeval_config_path, "w") as f:
-        #     json.dump(self.deepeval_config, f)
 
         self.parser = JsonOutputParser()
         self.config = config
-        # GPTModel(
-        #         model=model if model else config.model,
-        #         _openai_api_key=config.api_key,
-        #         base_url=config.base_url,
-        #     )
+
         answer_relevancy_metric = AnswerRelevancyMetric(threshold=0.7,
                                                         model="gpt-4o",
                                                         include_reason=False)
@@ -62,6 +44,7 @@ class OllamaLLM(LLMBase):
         bias_metric = BiasMetric(threshold=0.7,
                                  model="gpt-4o",
                                  include_reason=False)
+
         deepeval_callback = DeepEvalCallbackHandler(
             implementation_name=f"ollama {model if model else config.model}",
             logger=logger,
@@ -142,13 +125,30 @@ class OllamaLLM(LLMBase):
 
     #retries if failed to parse the result as json
     def generate_json(self, prompt: dict[str, str], params=None, **kwargs):
+
+        response_schemas = [
+            ResponseSchema(name="title", description="The name of the item"),
+            # ResponseSchema(name="description",
+            #                description="A detailed description"),
+            ResponseSchema(
+                name="properties",
+                description="List of properties as key-value pairs"),
+            ResponseSchema(name="required",
+                           description="List of required fields")
+        ]
+
+        # Create the output parser
+        output_parser = StructuredOutputParser.from_response_schemas(
+            response_schemas)
+
         chat_template = ChatPromptTemplate.from_messages([
-            ("system", prompt.get("system", "You are a helpful assistant.")),
+            # ("system", prompt.get("system", "You are a helpful assistant.")),
             ("user", "{user_input}"),
         ])
         completion_chain = chat_template | self.model
-        retry_parser = RetryOutputParser.from_llm(parser=self.parser,
-                                                  llm=self.model)
+        retry_parser = RetryOutputParser.from_llm(parser=output_parser,
+                                                  llm=self.model,
+                                                  max_retries=3)
 
         def parse_with_retry(x):
             return retry_parser.parse_with_prompt(
@@ -164,7 +164,16 @@ class OllamaLLM(LLMBase):
             {"user_input": prompt.get("user", "Answer my question")},
             config={'tags': ['ollama', 'json_mode', self.model.name]},
             **kwargs)
-        return json.dumps(response)
+
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": response["title"],
+            "type": "object",
+            "properties": response["properties"],
+            "required": response["required"]
+        }
+
+        return json.dumps(schema)
 
     async def agenerate_json(self,
                              prompt: dict[str, str],

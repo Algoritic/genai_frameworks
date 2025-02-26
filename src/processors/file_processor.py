@@ -31,11 +31,15 @@ def batch_optimize_image(folder_path: str) -> str:  #return folder path
     return folder_path
 
 
-def pdf_to_images(file: bytes) -> str:  #dir path
+def pdf_to_images(file: bytes, file_ext: str) -> str:  #dir path
     file_type = get_file_mimetype(file)
     logger.info(file_type)
     output_folder = tempfile.mkdtemp()
-    with tempfile.NamedTemporaryFile() as temp_file:
+    with tempfile.NamedTemporaryFile(
+            dir=output_folder if file_ext != ".pdf" else None,
+            suffix=file_ext,
+            delete=False,
+    ) as temp_file:
         temp_file.write(file)
         temp_file.seek(0)
         file_name = os.path.basename(temp_file.name)
@@ -48,4 +52,9 @@ def pdf_to_images(file: bytes) -> str:  #dir path
                 pix = page.get_pixmap(dpi=300)
                 pix.save(f"{output_folder}/{file_name}-page-%i.png" %
                          page.number)
+        else:
+            logger.info("Image received")
+            # temp_file.write(file)
+            # temp_file.seek(0)
+            return output_folder
     return output_folder
