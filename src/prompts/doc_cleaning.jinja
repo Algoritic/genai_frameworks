@@ -1,0 +1,10 @@
+Below is the image of one page of a PDF document, as well as some raw textual content that was previously extracted for it that includes position information for each image and block of text (The origin [0x0] of the coordinates is in the lower left corner of the image).
+Just return the plain text representation of this document as if you were reading it naturally.
+Turn equations into a LaTeX representation, and tables into markdown format. Remove the headers and footers, but keep references and footnotes.
+Read any natural handwriting.
+This is likely one page out of several in the document, so be sure to preserve any sentences that come from the previous page, or continue onto the next page, exactly as they are.
+If there is no text at all that you think you should read, you can output null.
+Do not hallucinate.
+RAW_TEXT_START
+{{base_text}}
+RAW_TEXT_END

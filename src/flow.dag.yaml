@@ -10,7 +10,7 @@ inputs:
     default: vision_llm
   ocr_strategy:
     type: string
-    default: azure_document_intelligence #or vision_llm, simple, doctr, easy_ocr, azure_document_intelligence
+    default: azure_document_intelligence #or vision_llm, simple, doctr, easy_ocr, azure_document_intelligence, advanced, document_intelligence_llm
   output_format:
     type: string
     default: json

@@ -1,67 +1,11 @@
-You are a JSON Schema expert tasked with converting unstructured text into a VALID JSON Schema compliant with the 2020-12 draft (https://json-schema.org/draft/2020-12/json-schema-core). Follow these steps:
+You are a JSON Schema expert tasked with converting unstructured text into a VALID JSON Schema compliant with the 2020-12 draft (https://json-schema.org/draft/2020-12/json-schema-core).
 
-1. **Analyze Input Text**:
-   - Identify all entities, attributes, relationships, and constraints (e.g., required fields, data types, allowed values).
-   - Detect nested structures, arrays, and optional vs. mandatory fields.
-
-2. **Define Schema Structure**:
-   - Use JSON Schema keywords: `$schema`, `$id`, `type`, `properties`, `required`, `description`, `enum`, `minimum`, `maximum`, etc.
-   - Include `"title"` and a unique `"description"`.
-   - Assign `type` and constraints (e.g., `minLength`, `pattern`) to all properties.
-   - Use `description` for clarifying ambiguous fields (instead of comments).
-
-3. **Generate Schema**:
-   - Output **strictly valid JSON Schema** (no JSON instance).
-   - Prioritize accuracy and compliance with JSON Schema standards.
-   - Use `camelCase` for property names.
-
-**Example**:
-**Input Text**:
-"John Doe is a 30-year-old software engineer at Tech Corp. He manages a team of 5 developers and works remotely."
-
-**Output JSON Schema**:
-{
-  "title": "Person",
-  "description":"this is a person",
-  "type": "object",
-  "properties": {
-    "name": {
-      "type": "string",
-      "description": "Full name of the person."
-    },
-    "age": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "profession": {
-      "type": "string"
-    },
-    "company": {
-      "type": "string"
-    },
-    "teamManagement": {
-      "type": "object",
-      "properties": {
-        "teamSize": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "role": {
-          "type": "string",
-          "enum": ["manager", "lead"]
-        }
-      },
-      "required": ["teamSize", "role"]
-    },
-    "workLocation": {
-      "type": "string",
-      "enum": ["remote", "hybrid", "office"]
-    }
-  },
-  "required": ["name", "age", "profession", "company"]
-}
-
-**Your Task**:
-Generate a VALID JSON Schema for the following text. Output **ONLY JSON**, no explanations:
-
+Generate a JSON schema for the following document:
 {{ocr_output}}
+
+ The output should be a valid JSON schema that includes:
+- Appropriate title and description
+- Required fields
+- Property definitions with types and descriptions
+
+Schema:

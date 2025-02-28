@@ -86,16 +86,24 @@ def preprocess_image_for_ocr(
 
 
 def get_skew_angle(image: np.ndarray) -> float:
-    """
-    Calculate skew angle of text in image.
-    """
-    coords = np.column_stack(np.where(image > 0))
-    angle = cv2.minAreaRect(coords)[-1]
+    """Estimate text skew angle in degrees."""
+    # Apply Otsu's threshold to binarize the image
+    _, thresh = cv2.threshold(image, 0, 255,
+                              cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    if angle < -45:
-        angle = 90 + angle
+    # Find contours
+    contours, _ = cv2.findContours(thresh, cv2.RETR_LIST,
+                                   cv2.CHAIN_APPROX_SIMPLE)
 
-    return angle
+    # Filter out small contours and compute angles
+    angles = np.array([
+        (angle + 90 if angle < -45 else angle - 90) if angle > 45 else angle
+        for _, _, angle in (cv2.minAreaRect(cnt) for cnt in contours
+                            if cv2.contourArea(cnt) >= 50)
+    ])
+
+    # Return average absolute angle or 0 if no valid contours
+    return np.mean(np.abs(angles)) if angles.size > 0 else 0.0
 
 
 def deskew_image(image: np.ndarray, angle: float) -> np.ndarray:

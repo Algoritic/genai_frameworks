@@ -61,23 +61,21 @@ class AzureLLM(LLMBase):
                             **kwargs):
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
         chat_template = ChatPromptTemplate.from_messages([
-            ("system",
-             prompt.get("system",
-                        "You are a helpful assistant. Tell me what you see.")),
             MessagesPlaceholder("msg"),
         ])
         messages = chat_template.invoke({
             "msg": [
-                HumanMessage(content=[{
-                    "type": "text",
-                    "text": "{user_input}"
-                }, {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "data:image/jpeg;base64," + image_base64,
-                        "detail": params.get('detail', 'high')
-                    }
-                }])
+                HumanMessage(
+                    content=[{
+                        "type": "text",
+                        "text": prompt.get("user", "Answer my question")
+                    }, {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/jpeg;base64," + image_base64,
+                            "detail": params.get('detail', 'high')
+                        }
+                    }])
             ]
         }).to_messages()
         response = self.model.invoke(messages, **kwargs)
@@ -288,32 +286,35 @@ class AzureLLM(LLMBase):
     def generate_structured_schema_from_image(self,
                                               image_bytes,
                                               json_schema,
+                                              method="json_mode",
                                               prompt: dict[str, str] = None,
                                               params=None,
                                               **kwargs):
         image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-        payload = [
-            {
-                "role": "system",
-                "content": prompt.get("system", "You are a helpful assistant.")
-            },
-            {
-                "role":
-                "user",
-                "content": [{
-                    "type":
-                    "text",
-                    "content":
-                    prompt.get("user", "Tell me what you see")
-                }, {
-                    "type": "image_url",
-                    "image_url": "data:image/jpeg;base64," + image_base64,
-                    "detail": params.get('detail', 'high')
-                }]
-            },
-        ]
-        response = self.model.with_structured_output(json_schema).invoke(
-            payload, **kwargs)
+        chat_template = ChatPromptTemplate.from_messages([
+            ("system",
+             prompt.get("system",
+                        "You are a helpful assistant. Tell me what you see.")),
+            MessagesPlaceholder("msg"),
+        ])
+        messages = chat_template.invoke({
+            "msg": [
+                HumanMessage(
+                    content=[{
+                        "type": "text",
+                        "text": prompt.get("user", "Answer my question")
+                    }, {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/jpeg;base64," + image_base64,
+                            "detail": params.get('detail', 'high')
+                        }
+                    }])
+            ]
+        }).to_messages()
+        response = self.model.with_structured_output(json_schema,
+                                                     method=method).invoke(
+                                                         messages, **kwargs)
         return response
 
     async def agenerate_structured_schema_from_image(self,
