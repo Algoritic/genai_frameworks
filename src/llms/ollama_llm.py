@@ -57,9 +57,7 @@ class OllamaLLM(LLMBase):
             cache=cache,
             model=model if model else config.model,
             temperature=config.temperature,
-            callbacks=[
-                LoggingCallbackHandler(logger=logger), deepeval_callback
-            ],
+            callbacks=[LoggingCallbackHandler(logger=logger)],
         )
 
     def generate(self, prompt: dict[str, str], params=None, **kwargs):
@@ -165,12 +163,25 @@ class OllamaLLM(LLMBase):
             config={'tags': ['ollama', 'json_mode', self.model.name]},
             **kwargs)
 
+        import re
+
+        def to_camel_case(s: str) -> str:
+            # Remove non-alphanumeric characters and split words
+            words = re.split(r'[^a-zA-Z0-9]', s)
+            # Capitalize all words except the first one and join them
+            return words[0].lower() + ''.join(
+                word.capitalize() for word in words[1:]) if words else ''
+
         schema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": response["title"],
-            "type": "object",
-            "properties": response["properties"],
-            "required": response["required"]
+            # "$schema": "http://json-schema.org/draft-07/schema#",
+            "name": to_camel_case(response["title"]),
+            # "type": "object",
+            "strict": False,
+            "schema": {
+                "type": "object",
+                "properties": response["properties"],
+                "required": response["required"]
+            },
         }
 
         return json.dumps(schema)

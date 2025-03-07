@@ -27,7 +27,7 @@ async def extract_text(ocr_output: str, output_format: str, schema: str):
         loader=jinja2.FileSystemLoader(prompt_template_path))
     template = environment.get_template("extract_json.jinja")
     prompt = template.render(json_schema=schema, ocr_output=ocr_output)
-    result = llm.generate_structured_schema(method="json_mode",
+    result = llm.generate_structured_schema(method="json_schema",
                                             prompt={"user": prompt},
                                             json_schema=json.loads(schema))
     if output_format == "json":

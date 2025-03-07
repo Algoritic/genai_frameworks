@@ -34,7 +34,16 @@ outputs:
     reference: ${extract_schema.output}
   raw_ocr_result:
     type: string
-    reference: ${perform_ocr.output}
+    reference: ${perform_ocr.output.text}
+  metrics:
+    type: string
+    reference: ${perform_ocr.output.metrics}
+  page_count:
+    type: int
+    reference: ${perform_ocr.output.page_count}
+  validation_result:
+    type: string
+    reference: ${quality_validator.output}
 
 nodes:
   - name: load_document
@@ -44,6 +53,14 @@ nodes:
       path: ./agents/load_file.py
     inputs:
       file_path: ${inputs.input_file}
+  - name: quality_validator
+    type: python
+    source:
+      type: code
+      path: ./agents/quality_validator.py
+    inputs:
+      folder_path: ${load_document.output}
+
   - name: optimize_image
     type: python
     source:
@@ -51,13 +68,20 @@ nodes:
       path: ./agents/optimize_image.py
     inputs:
       folder_path: ${load_document.output}
+  - name: compress_image
+    type: python
+    source:
+      type: code
+      path: ./agents/compress_image.py
+    inputs:
+      folder_path: ${optimize_image.output}
   - name: perform_ocr
     type: python
     source:
       type: code
       path: ./agents/perform_ocr.py
     inputs:
-      folder_path: ${optimize_image.output}
+      folder_path: ${compress_image.output}
       ocr_strategy: ${inputs.ocr_strategy}
   - name: extract_schema
     type: python
@@ -68,7 +92,7 @@ nodes:
       type: code
       path: ./agents/extract_schema.py
     inputs:
-      ocr_output: ${perform_ocr.output}
+      ocr_output: ${perform_ocr.output.text}
       json_schema: ${inputs.json_schema}
       use_schema: ${inputs.use_schema}
   - name: extract_text
@@ -77,6 +101,6 @@ nodes:
       type: code
       path: ./agents/extract_text.py
     inputs:
-      ocr_output: ${perform_ocr.output}
+      ocr_output: ${perform_ocr.output.text}
       output_format: ${inputs.output_format}
       schema: ${extract_schema.output}

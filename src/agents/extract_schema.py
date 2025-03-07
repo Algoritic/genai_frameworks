@@ -13,7 +13,7 @@ from core.logger import logger
 async def extract_schema(ocr_output: str,
                          use_schema: bool,
                          json_schema: str = None):
-    if (use_schema is True):
+    if (use_schema is True and json_schema is not None):
         logger.info("Using provided schema")
         logger.info("Schema: %s" % json_schema)
         return json_schema

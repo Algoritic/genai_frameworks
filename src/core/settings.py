@@ -73,6 +73,18 @@ class OllamaSettings(BaseSettings):
     api_key: str
 
 
+class OAISettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="OPENAI_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+    model: str
+    temperature: Optional[float] = 0
+    base_url: str
+    api_key: str
+
+
 class EvalSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=DOTENV_PATH,
                                       env_file_encoding="utf-8",
@@ -93,6 +105,7 @@ class _BaseSettings(BaseSettings):
 class _AppSettings(BaseModel):
     logger: _LoggerSettings = _LoggerSettings()
     azure_openai: AzureOpenAISettings = AzureOpenAISettings()
+    oai: OAISettings = OAISettings()
     redis: _RedisSettings = _RedisSettings()
     ollama: OllamaSettings = OllamaSettings()
     azure_document_intelligence: AzureDocumentIntelligenceSettings = AzureDocumentIntelligenceSettings(

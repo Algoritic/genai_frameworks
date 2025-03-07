@@ -22,7 +22,8 @@ async def document_classifier(files: Annotated[list[UploadFile],
     tags_str = tags
     tags = tags.split(",")
     for file in files:
-        with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+        file_ext = file.filename.split(".")[-1]
+        with tempfile.NamedTemporaryFile(suffix=f".{file_ext}") as temp_file:
             temp_file.write(file.file.read())
             temp_file.seek(0)
             root_path = Path(os.path.dirname(

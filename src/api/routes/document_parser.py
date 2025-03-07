@@ -66,7 +66,7 @@ async def process_file(file: UploadFile,
 
         background_tasks.add_task(
             load_and_run_flow, flow_path,
-            "https://webhook.site/2314d19d-bd31-4e26-bcda-a78f4d1095b6",
+            "https://webhook.site/65185ced-e3a3-4c16-bc1f-c4769e17aa47",
             temp_file.name, output_format, json_schema)
 
 
@@ -87,13 +87,15 @@ async def document_parser(
 
     if json_schema is not None:
         json_data = json_repair.loads(json_schema)
-        json_string = json.dumps(json_data, indent=0, separators=(",", ":"))
+        json_string = json.dumps(json_data, separators=(",", ":"))
 
         try:
             jsonschema.Draft202012Validator.check_schema(
                 json_repair.loads(json_string))
         except jsonschema.SchemaError as e:
             return {"message": "Invalid JSON schema: " + str(e)}
+    else:
+        json_string = None
 
     root_path = Path(os.path.dirname(os.path.abspath(__file__))).parent.parent
     flow_path = os.path.join(root_path, "flow.dag.yaml")

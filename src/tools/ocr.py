@@ -145,7 +145,7 @@ def use_document_intelligence_llm_ocr(bytes: bytes) -> str:
         credential=AzureKeyCredential(
             app_settings.azure_document_intelligence.api_key))
     poller = client.begin_analyze_document(
-        "prebuilt-read",
+        "prebuilt-layout",
         body=bytes,
         features=[
             # DocumentAnalysisFeature.KEY_VALUE_PAIRS,
@@ -182,7 +182,8 @@ def use_azure_document_intelligence(bytes: bytes) -> str:
         credential=AzureKeyCredential(
             app_settings.azure_document_intelligence.api_key))
     poller = client.begin_analyze_document(
-        "prebuilt-read",
+        "prebuilt-layout",
+        # "prebuilt-check.us",
         body=bytes,
         features=[
             # DocumentAnalysisFeature.KEY_VALUE_PAIRS,
@@ -191,6 +192,27 @@ def use_azure_document_intelligence(bytes: bytes) -> str:
         output_content_format=DocumentContentFormat.TEXT,
     )
     result = poller.result()
+    #calculate average, min, max confidence score
+    average_confidence = 0
+    min_confidence = 0
+    max_confidence = 0
+    word_count_list = [len(page.words) for page in result.pages]
+    word_count = sum(word_count_list)
+    confidences = [
+        word.confidence for page in result.pages for word in page.words
+    ]
+    if len(confidences) > 0:
+        average_confidence = round(sum(confidences) / len(confidences), 2)
+        min_confidence = min(confidences)
+        max_confidence = max(confidences)
+
+    metrics = {
+        "average_confidence": average_confidence,
+        "min_confidence": min_confidence,
+        "max_confidence": max_confidence,
+        "word_count": word_count
+    }
+
     # combined_result = ""
     # print("----Key-value pairs found in document----")
     # if result.key_value_pairs:
@@ -199,7 +221,10 @@ def use_azure_document_intelligence(bytes: bytes) -> str:
     #             print(f"Key '{kv_pair.key.content}' found within ")
     #         if kv_pair.value:
     #             print(f"Value '{kv_pair.value.content}' found within ")
-    return result.content
+    return {
+        "text": result.content,
+        "metrics": metrics,
+    }
     # for page in result.pages:
     #     for line in page.lines:
     #         combined_result += line.content

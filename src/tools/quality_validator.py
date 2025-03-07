@@ -196,7 +196,7 @@ class ImageQualityAnalyzer:
         std_dev = np.std(self.gray_image.astype(np.float32))
         # Normalize to 0-1 range (typical std dev range is 0-127)
         normalized = min(std_dev / 127.0, 1.0)
-        return normalized
+        return normalized.item()
 
     def _calculate_brightness(self) -> float:
         """Calculate average brightness of the image (0-1)"""
@@ -229,7 +229,7 @@ class ImageQualityAnalyzer:
         diff = cv2.absdiff(self.gray_image, denoised)
         # Calculate normalized noise level
         noise_level = np.mean(diff) / 255.0
-        return noise_level
+        return noise_level.item()
 
     def _calculate_skew_angle(self) -> float:
         """Estimate text skew angle in degrees."""

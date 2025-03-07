@@ -27,6 +27,7 @@ nodes:
       path: ./agents/load_file.py
     inputs:
       file_path: ${inputs.input_file}
+      first_page_only: true
   - name: optimize_image
     type: python
     source:

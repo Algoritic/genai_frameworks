@@ -1,7 +1,5 @@
 import base64
 import json
-import os
-from pathlib import Path
 import instructor
 from langchain_openai import AzureChatOpenAI
 from pydantic import BaseModel
@@ -208,10 +206,12 @@ class AzureLLM(LLMBase):
         ]
         root_client = self.model.root_client
         client = instructor.from_openai(root_client)
-        result = client.chat.completions.create(messages=payload,
-                                                model=self.config.model,
-                                                response_model=response_model,
-                                                **kwargs)
+        result = client.chat.completions.create(
+            messages=payload,
+            max_retries=3,
+            # model=self.config.model,
+            response_model=response_model,
+            **kwargs)
         return result
 
     async def agenerate_structured_model_from_image(self,
@@ -258,13 +258,13 @@ class AzureLLM(LLMBase):
                                    params=None,
                                    **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
-            ("system", prompt.get("system", "You are a helpful assistant.")),
+            # ("system", prompt.get("system", "You are a helpful assistant.")),
             ("user", "{user_input}"),
         ])
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
-        response = self.model.with_structured_output(
-            method=method, schema=json_schema).invoke(messages, **kwargs)
+        response = self.model.with_structured_output(json_schema).invoke(
+            messages, **kwargs)
         return response
 
     async def agenerate_structured_schema(self,
