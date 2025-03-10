@@ -3,7 +3,7 @@ from promptflow.core import tool
 import os
 import asyncio
 from typing import Dict, List, Any, Callable, Union
-from tools.ocr import advanced_pdf_ocr, simple_pdf_ocr, use_azure_document_intelligence, use_doctr, use_document_intelligence_llm_ocr, use_easy_ocr, use_vision_llm
+from tools.ocr import advanced_pdf_ocr, simple_pdf_ocr, use_azure_document_intelligence, use_doctr, use_document_intelligence_llm_ocr, use_easy_ocr, use_mistral_ocr, use_vision_llm
 
 
 @tool
@@ -33,7 +33,9 @@ async def perform_ocr(folder_path: str, ocr_strategy: str) -> Dict[str, Any]:
         "advanced":
         lambda content, _: advanced_pdf_ocr(content),
         "document_intelligence_llm":
-        lambda content, _: use_document_intelligence_llm_ocr(content)
+        lambda content, _: use_document_intelligence_llm_ocr(content),
+        "mistral":
+        lambda content, _: use_mistral_ocr(content)
     }
 
     # Verify that the provided strategy is valid

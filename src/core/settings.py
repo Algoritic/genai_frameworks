@@ -85,6 +85,17 @@ class OAISettings(BaseSettings):
     api_key: str
 
 
+class MistralSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=DOTENV_PATH,
+                                      env_file_encoding="utf-8",
+                                      env_prefix="MISTRAL_",
+                                      extra="ignore",
+                                      env_ignore_empty=True)
+    model: str
+    temperature: Optional[float] = 0
+    api_key: str
+
+
 class EvalSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=DOTENV_PATH,
                                       env_file_encoding="utf-8",
@@ -110,6 +121,7 @@ class _AppSettings(BaseModel):
     ollama: OllamaSettings = OllamaSettings()
     azure_document_intelligence: AzureDocumentIntelligenceSettings = AzureDocumentIntelligenceSettings(
     )
+    mistral: MistralSettings = MistralSettings()
 
 
 app_settings = _AppSettings()

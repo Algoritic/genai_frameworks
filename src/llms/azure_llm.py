@@ -30,6 +30,7 @@ class AzureLLM(LLMBase):
             api_version=config.version,
             max_tokens=config.max_tokens,
             temperature=config.temperature,
+            logprobs=True,
             callbacks=[LoggingCallbackHandler(logger=logger)])
 
     def generate(self, prompt: dict[str, str], params=None, **kwargs):
@@ -255,6 +256,7 @@ class AzureLLM(LLMBase):
                                    json_schema,
                                    method="json_mode",
                                    prompt: dict[str, str] = None,
+                                   include_raw=False,
                                    params=None,
                                    **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
@@ -263,8 +265,8 @@ class AzureLLM(LLMBase):
         ])
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
-        response = self.model.with_structured_output(json_schema).invoke(
-            messages, **kwargs)
+        response = self.model.with_structured_output(
+            json_schema, include_raw=include_raw).invoke(messages, **kwargs)
         return response
 
     async def agenerate_structured_schema(self,

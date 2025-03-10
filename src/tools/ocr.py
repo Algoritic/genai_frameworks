@@ -5,6 +5,7 @@ import easyocr
 import jinja2
 import pymupdf
 from llms.azure_llm import AzureLLM
+from llms.mistral_llm import MistralLLM
 from processors.file_processor import get_file_mimetype
 from doctr.models import ocr_predictor
 from doctr.io import DocumentFile
@@ -229,3 +230,8 @@ def use_azure_document_intelligence(bytes: bytes) -> str:
     #     for line in page.lines:
     #         combined_result += line.content
     # return combined_result
+
+
+def use_mistral_ocr(bytes: bytes) -> str:
+    llm = MistralLLM(config=app_settings.mistral)
+    return llm.extract_pdf_text(bytes)
