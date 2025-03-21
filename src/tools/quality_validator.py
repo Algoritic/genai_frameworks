@@ -12,6 +12,20 @@ from core.logger import logger
 # logger = logging.getLogger(__name__)
 
 
+def convert_np_types(obj):
+    """ Recursively convert numpy data types to native Python types. """
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj,
+                    np.generic):  # Covers np.float64, np.int64, np.bool_, etc.
+        return obj.item()
+    elif isinstance(obj, dict):
+        return {k: convert_np_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_np_types(v) for v in obj]
+    return obj
+
+
 @dataclass
 class QualityMetric:
     """Class to store quality metric information with thresholds"""
@@ -331,11 +345,11 @@ class ImageQualityAnalyzer:
             "preset_used": self.preset.name,
             "overall_score": self.overall_score,
             "overall_threshold": self.preset.overall_threshold,
-            "passed": self.passed,
+            "passed": convert_np_types(self.passed),
             "metrics": {
                 name: {
                     "value": metric.value,
-                    "passed": metric.passed,
+                    "passed": convert_np_types(metric.passed),
                     "min_threshold": metric.min_threshold,
                     "max_threshold": metric.max_threshold,
                     "weight": metric.weight,

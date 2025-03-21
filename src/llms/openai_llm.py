@@ -1,6 +1,10 @@
+import base64
 from core.settings import OAISettings
 from llms.llm import LLMBase
 from langchain_openai import OpenAI
+from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.messages import HumanMessage
 
 from olmocr.pipeline import build_page_query
 
@@ -32,3 +36,29 @@ class OAILLM(LLMBase):
         del query["messages"]
         response = self.model.invoke(input=input, **query)
         return response
+
+    def generate_from_image(self,
+                            image_bytes,
+                            prompt: dict[str, str],
+                            params=None,
+                            **kwargs):
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+        chat_template = ChatPromptTemplate.from_messages([
+            MessagesPlaceholder("msg"),
+        ])
+        messages = chat_template.invoke({
+            "msg": [
+                HumanMessage(
+                    content=[{
+                        "type": "text",
+                        "text": prompt.get("user", "Answer my question")
+                    }, {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/jpeg;base64," + image_base64,
+                        }
+                    }])
+            ]
+        }).to_messages()
+        response = self.model.invoke(messages, **kwargs)
+        return response.content

@@ -82,6 +82,30 @@ class OllamaLLM(LLMBase):
         response = await self.model.ainvoke(messages, **kwargs)
         return response
 
+    def generate_from_image(self,
+                            image_bytes,
+                            prompt: dict[str, str],
+                            params=None,
+                            **kwargs):
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+        # chat_template = ChatPromptTemplate.from_messages([
+        #     MessagesPlaceholder("msg"),
+        # ])
+        response = self.model.invoke([
+            HumanMessage(content=[
+                {
+                    "type": "text",
+                    "text": prompt
+                },
+                {
+                    "type": "image_url",
+                    "image_url": "data:image/jpeg;base64," + image_base64
+                },
+            ])
+        ])
+        # response = self.model.invoke(messages, **kwargs)
+        return response.content
+
     def generate_structured_model(self,
                                   response_model: BaseModel,
                                   prompt: dict[str, str] = None,

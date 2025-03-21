@@ -1,8 +1,3 @@
-import asyncio
-import base64
-from concurrent.futures import ProcessPoolExecutor
-from functools import partial
-import multiprocessing
 from typing import Any, Dict, Union, Optional
 from core.logger import logger
 import os
@@ -359,7 +354,12 @@ def batch_compress_documents(input_dir: str, output_dir: str,
         output_path = os.path.join(output_dir, output_filename)
 
         try:
-            result = compress_scanned_document(input_path, output_path,
+            result = compress_scanned_document(input_path,
+                                               output_path,
+                                               mode="text",
+                                               max_size_mb=0.5,
+                                               target_format=target_format,
+                                               quality=70,
                                                **kwargs)
             results.append({
                 "filename":
@@ -381,6 +381,8 @@ def batch_compress_documents(input_dir: str, output_dir: str,
     overall_compression_percentage = (
         1 - (total_compressed_size /
              total_original_size)) * 100 if total_original_size > 0 else 0
+
+    logger.info("Batch compression complete and saved to %s" % output_dir)
 
     return output_dir
 

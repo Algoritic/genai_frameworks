@@ -29,8 +29,7 @@ class MistralLLM(LLMBase):
             document=ImageURLChunk(image_url=base64_data_url),
             image_limit=1,
             retries=5,
-            include_image_base64=True)
+            include_image_base64=False)
         response_dict = json.loads(ocr_response.model_dump_json())
-        json_string = json.dumps(response_dict, indent=4)
-        print("JJJJJ", json_string)
+        # json_string = json.dumps(response_dict, indent=4)
         return response_dict["pages"][0]["markdown"]

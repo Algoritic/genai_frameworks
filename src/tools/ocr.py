@@ -6,6 +6,8 @@ import jinja2
 import pymupdf
 from llms.azure_llm import AzureLLM
 from llms.mistral_llm import MistralLLM
+from llms.ollama_llm import OllamaLLM
+from llms.openai_llm import OAILLM
 from processors.file_processor import get_file_mimetype
 from doctr.models import ocr_predictor
 from doctr.io import DocumentFile
@@ -13,6 +15,7 @@ from core.settings import app_settings
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import DocumentAnalysisFeature, DocumentContentFormat
+from rapidocr import RapidOCR
 
 
 def use_easy_ocr(bytes: bytes) -> str:
@@ -26,6 +29,25 @@ def use_doctr(path: str) -> str:
     doc = DocumentFile.from_images(path)
     result = predictor(doc)
     return result.render()
+
+
+def use_local_vision_llm(bytes: bytes) -> str:
+    llm = OllamaLLM(app_settings.ollama)
+    result = llm.generate_from_image(image_bytes=bytes,
+                                     prompt={
+                                         "user":
+                                         """
+                You are a document extraction tool.
+                Take a deep breath, look at this image and extract all the text content.
+                You must:
+                - Identify different sections or components.
+                - Provide the output as plain text, maintaining the original layout and line breaks where appropriate.
+                - Include all visible text from the image.
+                - Read from left to right. Be concise.
+                IMPORTANT: Do not include any introduction, explanation, or metadata. Only include the text content.
+                """
+                                     })
+    return result
 
 
 def use_vision_llm(bytes: bytes) -> str:
@@ -114,6 +136,8 @@ def advanced_pdf_ocr(bytes: bytes, lang: list[str] = ['en']) -> str:
 
 #file can be pdf or image
 def simple_pdf_ocr(bytes: bytes, lang: list[str] = ['en']) -> str:
+    os.environ[
+        "TESSDATA_PREFIX"] = "/opt/homebrew/Cellar/tesseract/5.5.0/share/tessdata"
     page_text: str = ""
     file_type = get_file_mimetype(bytes)
     if file_type is None:
@@ -235,3 +259,135 @@ def use_azure_document_intelligence(bytes: bytes) -> str:
 def use_mistral_ocr(bytes: bytes) -> str:
     llm = MistralLLM(config=app_settings.mistral)
     return llm.extract_pdf_text(bytes)
+
+
+def use_openai(bytes: str) -> str:
+    llm = OAILLM(app_settings.oai)
+    result = llm.generate_from_image(image_bytes=bytes,
+                                     prompt={
+                                         "user":
+                                         """
+                You are a document extraction tool.
+                Take a deep breath, look at this image and extract all the text content.
+                You must:
+                - Identify different sections or components.
+                - Provide the output as plain text, maintaining the original layout and line breaks where appropriate.
+                - Include all visible text from the image.
+                - Read from left to right. Be concise.
+                IMPORTANT: Do not include any introduction, explanation, or metadata. Only include the text content.
+                """
+                                     })
+    return result
+
+
+import numpy as np
+from typing import List, Tuple, Union, Optional
+
+
+def reorganize_ocr_output(
+        dt_boxes: np.ndarray,
+        txts: Optional[Union[List[str], Tuple[str]]] = None) -> str:
+    """
+    Reorganize OCR output to represent the actual document layout.
+
+    Args:
+        dt_boxes: numpy array of shape (n, 4, 2) containing bounding box coordinates
+                 in the format [top-left, top-right, bottom-right, bottom-left]
+        txts: list or tuple of strings corresponding to each bounding box
+
+    Returns:
+        A string representing the document with proper row-based layout
+    """
+    # Input validation
+    if txts is None or len(dt_boxes) != len(txts):
+        raise ValueError(
+            "Number of bounding boxes and text strings must match")
+
+    if len(dt_boxes) == 0:
+        return ""
+
+    # Calculate vertical range for each box
+    box_info = []
+    for i, box in enumerate(dt_boxes):
+        # Extract y-coordinates
+        y_coords = box[:, 1]
+
+        # Find min and max y values
+        min_y = np.min(y_coords)
+        max_y = np.max(y_coords)
+
+        # Calculate center for sorting within rows
+        center_y = (min_y + max_y) / 2
+
+        # Calculate leftmost x-coordinate for sorting within a row
+        x_coords = box[:, 0]
+        min_x = np.min(x_coords)
+
+        box_info.append({
+            'id': i,
+            'text': txts[i],
+            'min_y': min_y,
+            'max_y': max_y,
+            'center_y': center_y,
+            'min_x': min_x
+        })
+
+    # Group boxes into rows based on vertical overlap
+    rows = []
+    remaining_boxes = box_info.copy()
+
+    while remaining_boxes:
+        # Start a new row with the first box
+        current_row = [remaining_boxes.pop(0)]
+        current_min_y = current_row[0]['min_y']
+        current_max_y = current_row[0]['max_y']
+
+        # Calculate overlap threshold (adjustable parameter)
+        threshold = 0.5 * (current_max_y - current_min_y)
+
+        i = 0
+        while i < len(remaining_boxes):
+            box = remaining_boxes[i]
+
+            # Check if this box overlaps with the current row
+            overlap = min(current_max_y, box['max_y']) - max(
+                current_min_y, box['min_y'])
+            if overlap > threshold:
+                # Add to current row
+                current_row.append(box)
+
+                # Update row's vertical range
+                current_min_y = min(current_min_y, box['min_y'])
+                current_max_y = max(current_max_y, box['max_y'])
+
+                # Remove from remaining boxes
+                remaining_boxes.pop(i)
+            else:
+                i += 1
+
+        # Add the completed row
+        rows.append(current_row)
+
+    # Sort rows by center_y (top to bottom)
+    rows.sort(key=lambda row: np.mean([box['center_y'] for box in row]))
+
+    # Sort boxes within each row by min_x (left to right)
+    for row in rows:
+        row.sort(key=lambda box: box['min_x'])
+
+    # Concatenate text with appropriate spacing
+    result = []
+    for row in rows:
+        row_text = " ".join([box['text'] for box in row])
+        result.append(row_text)
+
+    # Join rows with newlines
+    return "\n".join(result)
+
+
+def use_rapid_ocr(path: str) -> str:
+    engine = RapidOCR()
+    result = engine(path)
+    txts = result.txts
+    result = reorganize_ocr_output(result.boxes, txts)
+    return result

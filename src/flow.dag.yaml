@@ -10,18 +10,21 @@ inputs:
     default: vision_llm
   ocr_strategy:
     type: string
-    default: azure_document_intelligence #or vision_llm, simple, doctr, easy_ocr, azure_document_intelligence, advanced, document_intelligence_llm
+    default: azure_document_intelligence #or vision_llm, simple, doctr, easy_ocr, azure_document_intelligence, advanced, document_intelligence_llm, mistral,local_vision_llm, rapid_ocr
   output_format:
     type: string
     default: json
   callback_url:
     type: string
-    default: https://webhook.site/1accd4fd-5d0a-4748-a8e1-3a04662428e6
+    default: https://webhook.site/f257b2bf-6cd9-42aa-b3cc-b5e2630bf37b
   json_schema:
     type: string
   use_schema:
     type: bool
     default: false
+  clean_up:
+    type: bool
+    default: true
 outputs:
   payload_path:
     type: string
@@ -83,6 +86,7 @@ nodes:
     inputs:
       folder_path: ${compress_image.output}
       ocr_strategy: ${inputs.ocr_strategy}
+      clean_up: ${inputs.clean_up}
   - name: extract_schema
     type: python
     # activate:
