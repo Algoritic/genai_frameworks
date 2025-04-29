@@ -15,7 +15,12 @@ from core.settings import app_settings
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import DocumentAnalysisFeature, DocumentContentFormat
-from rapidocr import RapidOCR
+
+from rapidocr_onnxruntime import RapidOCR
+
+from tools.utils import format_markdown
+from typing import List, Tuple
+import numpy as np
 
 
 def use_easy_ocr(bytes: bytes) -> str:
@@ -33,21 +38,32 @@ def use_doctr(path: str) -> str:
 
 def use_local_vision_llm(bytes: bytes) -> str:
     llm = OllamaLLM(app_settings.ollama)
+    root_path = Path(os.path.dirname(os.path.abspath(__file__))).parent
+    prompt_template_path = os.path.join(
+        root_path,
+        "prompts",
+    )
+    environment = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(prompt_template_path))
+    template = environment.get_template("ocr_extraction.jinja")
+    prompt = template.render()
+    # result = llm.generate_from_image(image_bytes=bytes,
+    #                                  prompt={
+    #                                      "user":
+    #                                      """
+    #             You are a document extraction tool.
+    #             Take a deep breath, look at this image and extract all the text content.
+    #             You must:
+    #             - Identify different sections or components.
+    #             - Provide the output as plain text, maintaining the original layout and line breaks where appropriate.
+    #             - Include all visible text from the image.
+    #             - Read from left to right. Be concise.
+    #             IMPORTANT: Do not include any introduction, explanation, or metadata. Only include the text content.
+    #             """
+    #                                  })
     result = llm.generate_from_image(image_bytes=bytes,
-                                     prompt={
-                                         "user":
-                                         """
-                You are a document extraction tool.
-                Take a deep breath, look at this image and extract all the text content.
-                You must:
-                - Identify different sections or components.
-                - Provide the output as plain text, maintaining the original layout and line breaks where appropriate.
-                - Include all visible text from the image.
-                - Read from left to right. Be concise.
-                IMPORTANT: Do not include any introduction, explanation, or metadata. Only include the text content.
-                """
-                                     })
-    return result
+                                     prompt={"user": prompt})
+    return format_markdown(result)
 
 
 def use_vision_llm(bytes: bytes) -> str:
@@ -170,7 +186,7 @@ def use_document_intelligence_llm_ocr(bytes: bytes) -> str:
         credential=AzureKeyCredential(
             app_settings.azure_document_intelligence.api_key))
     poller = client.begin_analyze_document(
-        "prebuilt-layout",
+        "prebuilt-read",
         body=bytes,
         features=[
             # DocumentAnalysisFeature.KEY_VALUE_PAIRS,
@@ -385,9 +401,61 @@ def reorganize_ocr_output(
     return "\n".join(result)
 
 
+def parse_ocr_to_text(ocr_data: List[Tuple[List[List[float]], str, str]],
+                      y_threshold: int = 10) -> str:
+    """
+    Parses OCR output into a single string with line-by-line text.
+
+    Args:
+        ocr_data: The OCR output as a list of bounding boxes with associated text and confidence.
+        y_threshold: Maximum Y-axis distance to group text into the same line.
+
+    Returns:
+        A single string containing the parsed lines, separated by newline characters.
+    """
+    elements = []
+
+    # Step 1: Calculate center points and gather text
+    for box, text, _ in ocr_data:
+        x_coords = [point[0] for point in box]
+        y_coords = [point[1] for point in box]
+        x_center = np.mean(x_coords)
+        y_center = np.mean(y_coords)
+        elements.append((y_center, x_center, text))
+
+    # Step 2: Sort by Y position (top to bottom)
+    elements.sort(key=lambda e: e[0])
+
+    lines = []
+    current_line = []
+    current_y = None
+
+    for y, x, text in elements:
+        if current_y is None or abs(y - current_y) > y_threshold:
+            if current_line:
+                current_line.sort(key=lambda e: e[0])  # sort by X
+                lines.append(' '.join(word for _, word in current_line))
+            current_line = [(x, text)]
+            current_y = y
+        else:
+            current_line.append((x, text))
+
+    # Don't forget the last line
+    if current_line:
+        current_line.sort(key=lambda e: e[0])
+        lines.append(' '.join(word for _, word in current_line))
+
+    return '\n'.join(lines)
+
+
 def use_rapid_ocr(path: str) -> str:
-    engine = RapidOCR()
-    result = engine(path)
-    txts = result.txts
-    result = reorganize_ocr_output(result.boxes, txts)
-    return result
+    engine = RapidOCR(
+        rec_model_path=
+        "/Users/00153837yeohyihang/Desktop/Code/current-working/llm-framework/src/tools/PP OCRv4 Model.onnx"
+    )
+    result, _ = engine(path)
+    # txts = result
+    # print(txts)
+    text = parse_ocr_to_text(result)
+    print(text)
+    return text
