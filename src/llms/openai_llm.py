@@ -19,7 +19,9 @@ class OAILLM(LLMBase):
         self.model = OpenAI(
             model=config.model,
             temperature=config.temperature,
-            max_tokens=3000,
+            api_key=config.api_key,
+            base_url=config.base_url,
+            # max_tokens=3000,
         )
 
     def generate(self, prompt, params=None, **kwargs):
@@ -28,11 +30,10 @@ class OAILLM(LLMBase):
     async def extract_pdf_text(self, file_path: str):
         query = await build_page_query(file_path,
                                        page=1,
-                                       target_longest_image_dim=1024,
+                                       target_longest_image_dim=128,
                                        target_anchor_text_len=6000)
-        query['model'] = 'allenai_olmocr-7b-0225-preview'
+        query['model'] = self.config.model
         input = query["messages"]
-        print(input)
         del query["messages"]
         response = self.model.invoke(input=input, **query)
         return response
@@ -62,3 +63,11 @@ class OAILLM(LLMBase):
         }).to_messages()
         response = self.model.invoke(messages, **kwargs)
         return response.content
+
+    def generate_structured_model(self,
+                                  response_model,
+                                  prompt=None,
+                                  params=None,
+                                  **kwargs):
+        return super().generate_structured_model(response_model, prompt,
+                                                 params, **kwargs)

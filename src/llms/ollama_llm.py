@@ -54,6 +54,7 @@ class OllamaLLM(LLMBase):
                 bias_metric,
             ])
         self.model = ChatOllama(
+            base_url=config.base_url,
             cache=cache,
             model=model if model else config.model,
             temperature=config.temperature,
@@ -70,7 +71,7 @@ class OllamaLLM(LLMBase):
         response = self.model.invoke(messages,
                                      config={'tags': ['ollama']},
                                      **kwargs)
-        return response
+        return response.content
 
     async def agenerate(self, prompt: dict[str, str], params=None, **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
@@ -109,6 +110,7 @@ class OllamaLLM(LLMBase):
     def generate_structured_model(self,
                                   response_model: BaseModel,
                                   prompt: dict[str, str] = None,
+                                  method='json_schema',
                                   params=None,
                                   **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
@@ -118,7 +120,7 @@ class OllamaLLM(LLMBase):
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
         response = self.model.with_structured_output(
-            response_model.model_json_schema).invoke(
+            response_model.model_json_schema(), method=method).invoke(
                 messages,
                 config={'tags': ['ollama', 'structured', self.model.name]},
                 **kwargs)
@@ -136,7 +138,7 @@ class OllamaLLM(LLMBase):
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
         response = await self.model.with_structured_output(
-            response_model.model_json_schema
+            response_model.model_json_schema()
         ).ainvoke(messages,
                   config={
                       'tags':

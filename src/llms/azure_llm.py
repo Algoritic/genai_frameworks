@@ -41,7 +41,7 @@ class AzureLLM(LLMBase):
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
         response = self.model.invoke(messages, **kwargs)
-        return response
+        return response.content
 
     async def agenerate(self, prompt: dict[str, str], params=None, **kwargs):
         chat_template = ChatPromptTemplate.from_messages([
@@ -51,7 +51,7 @@ class AzureLLM(LLMBase):
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
         response = await self.model.ainvoke(messages)
-        return response
+        return response.content
 
     def generate_from_image(self,
                             image_bytes,
@@ -265,8 +265,10 @@ class AzureLLM(LLMBase):
         ])
         messages = chat_template.format_messages(
             user_input=prompt.get("user", "Answer my question"))
-        response = self.model.with_structured_output(
-            json_schema, include_raw=include_raw).invoke(messages, **kwargs)
+        response = self.model.with_structured_output(json_schema,
+                                                     include_raw=include_raw,
+                                                     method=method).invoke(
+                                                         messages, **kwargs)
         return response
 
     async def agenerate_structured_schema(self,
