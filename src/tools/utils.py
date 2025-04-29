@@ -2,6 +2,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 from core.settings import AzureOpenAISettings, OllamaSettings
 
 
@@ -113,3 +114,12 @@ def linear_probability_to_score(linear_probs):
         return None
 
     return recursive_conversion(linear_probs)
+
+
+def format_markdown(text: str) -> str:
+    """Format markdown text by removing markdown and code blocks"""
+
+    formatted_markdown = re.sub(r"^```[a-z]*\n([\s\S]*?)\n```$", r"\1", text)
+    formatted_markdown = re.sub(r"^```\n([\s\S]*?)\n```$", r"\1",
+                                formatted_markdown)
+    return formatted_markdown
