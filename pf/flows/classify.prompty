@@ -1,0 +1,57 @@
+---
+name: Classify document
+model:
+    api: chat
+
+inputs:
+    page_content:
+        type: string
+    prev_doc_name:
+        type: string
+    prev_doc_sub_name:
+        type: string
+---
+
+system:
+You are a meticulous document-classification specialist.
+Your task is to read a single, OCR'ed, full-text document (Malay and/or English) and decide which—if any—of the predefined document types it belongs to.
+
+user:
+Your task is to determine the one most relevant document name and sub document name for the given page content.
+
+=== PREVIOUS PAGE (DOCUMENT NAME,SUB DOCUMENT NAME)  ===
+{{prev_doc_name}}, {{prev_doc_sub_name}}
+
+There is a high chance that the document name of the current page is the same as the previous page. You must provide strong justification if you think the document name is different.
+
+=== CURRENT PAGE CONTENT ===
+{{page_content}}
+
+Below are the rules for document tagging. Please follow the descriptions strictly. Use only the specified keywords. Include keywords in your justification.
+DO NOT HALLUCINATE OR MAKE UP ANYTHING. DO NOT ADD ANYTHING THAT IS NOT IN THE KEYWORDS.
+
+"document_name,sub_document_name,description,keywords
+Advice of release,Advise of Release,"IIn short AOR. Letter Head Lawyer. Advice of Release can contain Land Search keyword. Letter head contains law firm name. This is a checklist for all the document type below. This document should contain EXPLICIT keywords from other classes. Lawyer confirmation on the completeness of the document by using checklist. Instruction to release the loan.","eLDS Lawyer Checklist', 'Advise of Release','1. Security Documents', '2. Searches', 'a.Land search', 'b(i) & b(ii) Bankruptcy Search', '3. Letter of Undertaking/ Disclaimer/ Consent Page', '4. Others', '5. The Related Documents', '6. Comments (If Any)', 'release …', 'Your faithfully', 'Withdrawal of private caveat', 'Charge', 'Letter of Guarantee', and 'Memorandum of Deposit cum Assignment', 'Important Note', 'Digital documents, use of electronic signature or digital signature and delivery of documents electronically'"
+Bankruptcy Search Result / Company Winding Up Search Result,Bankruptcy Search Result / Company Winding Up Search Result,"Letter from Jabatan Insolvensi Malaysia / Malaysian Department of Insolvency","'Bankruptcy Search Result', 'Company Winding Up Search Result'"
+Statutory Declaration (Owner Occupancy), Statutory Declaration (Owner Occupancy), "Letter with word "Declaration" or "Form of Declaration" & special keyword :…used for my/our own business…", "Declaration', 'Form of Declaration', '...used for my own business', '...used for our own business...'"
+Statutory Declaration (Owner Occupancy),Stamp Certificate,"Letter from Lembaga Hasil Dalam Negeri. Type of Instrument must be AKUAN BERKANUN. This letter can be before or after the Statutory Declaration.","'Type of Instrument','Sijil Setem / Stamp Certificate','AKAUN BERKANUN'"
+Acknowledgement of Legal Representation,Acknowledgement of Legal Representation,"Letter signed by Purchaser / Borrower", "'Acknowledgement of Legal Representation'"
+Land Search,Land Search,""Letter with Keyword "Letter from State Land Office", "'Carian Persendirian', 'Carian Rasmi'"
+Confirmation Letter from Pajabat Tanah dan Galian,Confirmation Letter from Pajabat Tanah dan Galian,Letter Head from State Land Office / Pajabat Tanah dan Galian Negeri,""
+Confirmation Letter from Perbadanan Kemajuan Perumahan Negeri,Confirmation Letter from Perbadanan Kemajuan Perumahan Negeri, Letter Head from Perbadanan Kemajuan Perumahan Negeri,"'Perbadanan Kemajuan Perumahan Negeri'"
+Quit Rent,Quit Rent,"Letter from State Land Office / Pajabat Tanah dan Galian Negeri and detail, have amount stated", "'Title No','Mukim', 'Daerah', 'amount'"
+Full Power of Attorney,Full Power of Attorney,"Document with word "Full Power of Attorney" with Donor & Attorney name", "'Full Power of Attorney'"
+Solicitor Letter of Undertaking,Solicitor Letter of Undertaking,"Letter from Lawyer address to Maybank", "'undertake…'"
+Redemption Statement,Redemption Statement,"Letter from Bank address to Maybank","'Redemption Statement'"
+Developer Letter of Undertaking,Developer Letter of Undertaking,"Developer's Letter address to Maybank.","'Letter of Undertaking', 'the difference between the Purchase Price and Financial Facility has ….', 'currently charge'"
+Letter of Offer,Stamp Certificate,"Letter from Lembaga Hasil Dalam Negeri. Type of Instrument must be LETTER OF OFFER. This letter can be before or in between the Letter of Offer.","'Sijil Setem', 'Stamp Certificate', 'Type of Instrument', 'LETTER OF OFFER'"
+Letter of Offer,Letter of Offer,"Letter with Bank Letter Head", "'Type of Facility', 'Facility Amount', 'Acceptance Page', 'Acknowledgement Page', 'Annexure 1', 'Specific Terms & Conditions', 'Annexure 2 - Part A', 'Annexure 2 - Part B', 'Annexure 2', 'EXPRESS RIGHT TO CANCEL'"
+Notice of Assignment,Notice of Assignment,"Letter with keyword 'Notice of Assignment", "'Notice of Assignment'"
+Presentation Receipt,Presentation Receipt,Receipt from Pejabat Ketua Pendaftar Mahkamah Persekutuan Malaysia, "'Presentation Receipt'"
+Deed of Assignment,Deed of Assignment,"Document with word "Deed of Assignment" with Maybank Name and Borrower(S) Name", "'Deed of Assignment', 'Execution Page - The Bank' , 'Execution Page - The Assignor', 'Certificate of Understanding', 'Authentication of Power of Attorney','First Schedule', 'First Schedule - Sector No.1',''First Schedule - Sector No.2', 'First Schedule - Sector No.3', 'First Schedule - Sector No.4', ''First Schedule - Sector No.5', ''First Schedule - Sector No.6'"
+Deed of Assignment,Stamp Certificate,"Letter from Lembaga Hasil Dalam Negeri. Type of Instrument must be Deed of Assignment. This letter can be before or in between Deed of Assignment.","Type of Instrument','Sijil Setem / Stamp Certificate','Deed of Assignment'"
+Sale & Purchase Agreement,Sale & Purchase Agreement,"Document with word Sale & Purchase Agreement with information at least 2 parties e.g Seller/Developer and Purchaser name.","Seller', 'Developer', 'Purchaser', 'Schedule G', 'Schedule H', 'Preamble', 'charged to...', 'Housing Development Account','Signing Page - In Witness Whereof'"
+Sale & Purchase Agreement,Stamp Certificate,"Letter from Lembaga Hasil Dalam Negeri. Type of Instrument must be SALES AND PURCHASE AGREEMENT. This letter can be before or in between the Sales and Purchase Agreement", "'Sijil Setem', 'Stamp Certificate', 'Type of Instrument', 'SALES AND PURCHASE AGREEMENT'"
+Commodity Murabahah Facility Agreement,Commodity Murabahah Facility Agreement,"Document with Maybank Name and Borrower(S) Name. This Document may consist set of Letter of Offer.Page First Schedule No.1 - No.8. Last Page CMFA - Understanding", "Commodity Murabahah Facility Agreement', 'Borrower(s) Name', 'Schedule No.1',Schedule No.2','Schedule No.3','Schedule No.4'.'Schedule No.5','Schedule No.6','Schedule No.7','Schedule No.8','CMFA - Understanding'"
+Commodity Murabahah Facility Agreement,Stamp Certificate,"Letter from Lembaga Hasil Dalam Negeri with Type of Instrument. Type of Instrument must be Commodity Murabahah Facility Agreement. This letter can be before or in between Commodity Murabahah Facility Agreement.","'Sijil Setem', 'Stamp Certificate', 'Type of Instrument', 'Commodity Murabahah Facility Agreement'"
+

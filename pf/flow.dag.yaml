@@ -1,0 +1,58 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+environment:
+  python_requirements_txt: ../requirements.txt
+
+inputs:
+  input_file:
+    type: string
+    default: "JVBERi0xLjEKJcKlwrHDqwoKMSAwIG9iagogIDw8IC9UeXBlIC9DYXRhbG9nCiAgICAgL1BhZ2VzIDIgMCBSCiAgPj4KZW5kb2JqCgoyIDAgb2JqCiAgPDwgL1R5cGUgL1BhZ2VzCiAgICAgL0tpZHMgWzMgMCBSXQogICAgIC9Db3VudCAxCiAgICAgL01lZGlhQm94IFswIDAgMzAwIDE0NF0KICA+PgplbmRvYmoKCjMgMCBvYmoKICA8PCAgL1R5cGUgL1BhZ2UKICAgICAgL1BhcmVudCAyIDAgUgogICAgICAvUmVzb3VyY2VzCiAgICAgICA8PCAvRm9udAogICAgICAgICAgIDw8IC9GMQogICAgICAgICAgICAgICA8PCAvVHlwZSAvRm9udAogICAgICAgICAgICAgICAgICAvU3VidHlwZSAvVHlwZTEKICAgICAgICAgICAgICAgICAgL0Jhc2VGb250IC9UaW1lcy1Sb21hbgogICAgICAgICAgICAgICA+PgogICAgICAgICAgID4+CiAgICAgICA+PgogICAgICAvQ29udGVudHMgNCAwIFIKICA+PgplbmRvYmoKCjQgMCBvYmoKICA8PCAvTGVuZ3RoIDU1ID4+CnN0cmVhbQogIEJUCiAgICAvRjEgMTggVGYKICAgIDAgMCBUZAogICAgKEhlbGxvIFdvcmxkKSBUagogIEVUCmVuZHN0cmVhbQplbmRvYmoKCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxOCAwMDAwMCBuIAowMDAwMDAwMDc3IDAwMDAwIG4gCjAwMDAwMDAxNzggMDAwMDAgbiAKMDAwMDAwMDQ1NyAwMDAwMCBuIAp0cmFpbGVyCiAgPDwgIC9Sb290IDEgMCBSCiAgICAgIC9TaXplIDUKICA+PgpzdGFydHhyZWYKNTY1CiUlRU9GCg=="
+    # default: "/Users/00153837yeohyihang/Desktop/Code/current-working/AI POC/samples/3. LOC1 64119 2024 46724/OA SEARCH.pdf"
+    # default: "https://github.com/py-pdf/sample-files/blob/bc3e2e1d5009fb0b98786c59de5e456eafbec659/001-trivial/minimal-document.pdf"
+  json_schema:
+    type: object
+    default: { "name": "capital", "strict": False, "schema": { "type": "object", "properties": { "name": { "type": "string", "description": "Name of the country" } } } }
+
+nodes:
+- name: load_document
+  type: python
+  source:
+    type: code
+    path: ./tools/load_file.py
+  inputs:
+    file_path: ${inputs.input_file}
+
+- name: optimize_image
+  type: python
+  source:
+    type: code
+    path: ./tools/optimize_image.py
+  inputs:
+    image_bytes: ${load_document.output}
+
+- name: perform_ocr
+  type: python
+  source:
+    type: code
+    path: ./tools/perform_ocr.py
+  inputs:
+    image_bytes: ${optimize_image.output}
+
+- name: structured_extraction
+  type: python
+  source:
+    type: code
+    path: ./tools/structured_extraction.py
+  inputs:
+    ocr_result: ${perform_ocr.output.text}
+    json_schema: ${inputs.json_schema}
+
+outputs:
+  jsonSchema:
+    type: object
+    reference: ${inputs.json_schema}
+  OCRResult:
+    type: object
+    reference: ${perform_ocr.output}
+  extractionResult:
+    type: object
+    reference: ${structured_extraction.output}

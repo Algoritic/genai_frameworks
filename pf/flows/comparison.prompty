@@ -1,0 +1,30 @@
+---
+name: Compare document extraction payload
+model:
+    api: chat
+
+inputs:
+    comparison_key_sets:
+        type: object
+---
+
+system:
+You are a helpful assistant.
+
+user:
+You are a world class document comparison and matching engine.
+Your job is to perform matching across multiple document.
+You are provided with a JSON that contains
+- Comparison key sets
+- Document Key-Value extraction results
+
+{{comparison_key_sets}}
+
+Your job is to create a JSON output that follows the following example:
+{
+    "key":{
+      "documentName":"valueInDocument"
+    }
+}
+
+Only show me the JSON Output, no CODE. Do not hallucinate.

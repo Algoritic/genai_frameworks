@@ -1,0 +1,29 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+environment:
+  python_requirements_txt: ../requirements.txt
+
+inputs:
+  ocr_result:
+    type: object
+    default: "Hello World"
+  json_schema:
+    type: object
+    default: { "name": "capital", "strict": False, "schema": { "type": "object", "properties": { "name": { "type": "string", "description": "Name of the country" } } } }
+
+nodes:
+- name: structured_extraction
+  type: python
+  source:
+    type: code
+    path: ./tools/structured_extraction.py
+  inputs:
+    ocr_result: ${inputs.ocr_result}
+    json_schema: ${inputs.json_schema}
+
+outputs:
+  json_schema:
+    type: object
+    reference: ${inputs.json_schema}
+  extraction_result:
+    type: object
+    reference: ${structured_extraction.output}

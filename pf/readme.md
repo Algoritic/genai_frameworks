@@ -1,0 +1,1 @@
+`pf flow test --flow tools.extract_json:extract_json --inputs ocr_output="Paris" schema="{\"name\":\"capital\",\"strict\":false,\"schema\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Name of the country\"}}}}"`
