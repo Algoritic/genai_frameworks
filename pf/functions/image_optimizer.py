@@ -1,14 +1,17 @@
+import multiprocessing
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import List, Tuple
+
 import cv2
 import numpy as np
-import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
-from pathlib import Path
-import time
 from logger import logger
+from promptflow.tracing import trace
 
 
+@trace
 def optimize_image_fast(img_path: str) -> bool:
     """
     Speed-optimized single image processing function.
@@ -36,8 +39,7 @@ def optimize_image_fast(img_path: str) -> bool:
 
         # Skip Gaussian blur and directly apply unsharp mask
         # This combines two steps into one for speed
-        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]],
-                          dtype=np.float32)
+        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]], dtype=np.float32)
         sharpened = cv2.filter2D(denoised, -1, kernel)
 
         # Use optimized write with quality setting
@@ -48,6 +50,7 @@ def optimize_image_fast(img_path: str) -> bool:
         return False
 
 
+@trace
 def process_batch(file_batch: List[str]) -> Tuple[int, int]:
     """Process a batch of files, returns (success_count, total_count)"""
     success = 0
@@ -62,12 +65,10 @@ def batch_optimize_byte_images(files: List[bytes]) -> List[bytes]:
     cpu_count = multiprocessing.cpu_count()
     batch_size = max(1, min(10, len(files) // cpu_count))
     worker_count = min(
-        cpu_count * 2,
-        len(files))  # Use more threads than CPUs due to I/O operations
+        cpu_count * 2, len(files)
+    )  # Use more threads than CPUs due to I/O operations
     # Split files into batches for better workload distribution
-    batches = [
-        files[i:i + batch_size] for i in range(0, len(files), batch_size)
-    ]
+    batches = [files[i : i + batch_size] for i in range(0, len(files), batch_size)]
     # Process using ThreadPoolExecutor (better for I/O bound tasks)
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         results = executor.map(process_batch, batches)
@@ -75,12 +76,15 @@ def batch_optimize_byte_images(files: List[bytes]) -> List[bytes]:
     total_success = sum(r[0] for r in results)
     total_files = sum(r[1] for r in results)
     # Print stats only in non-production environments
-    if os.environ.get('ENV') != 'production':
-        logger.info(f"Processed {total_success}/{total_files} images "
-                    f"({total_files/len(files):.1f} img/s)")
+    if os.environ.get("ENV") != "production":
+        logger.info(
+            f"Processed {total_success}/{total_files} images "
+            f"({total_files / len(files):.1f} img/s)"
+        )
     return files
 
 
+@trace
 def batch_optimize_image(folder_path: str) -> str:
     """
     Ultra-fast batch optimization of images in a folder.
@@ -96,9 +100,10 @@ def batch_optimize_image(folder_path: str) -> str:
 
     # Fast file collection with list comprehension
     # Filter for common image extensions to avoid wasting time on non-images
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp'}
+    image_extensions = {".jpg", ".jpeg", ".png", ".bmp"}
     files = [
-        str(path / f) for f in os.listdir(folder_path)
+        str(path / f)
+        for f in os.listdir(folder_path)
         if os.path.splitext(f.lower())[1] in image_extensions
     ]
 
@@ -109,13 +114,11 @@ def batch_optimize_image(folder_path: str) -> str:
     cpu_count = multiprocessing.cpu_count()
     batch_size = max(1, min(10, len(files) // cpu_count))
     worker_count = min(
-        cpu_count * 2,
-        len(files))  # Use more threads than CPUs due to I/O operations
+        cpu_count * 2, len(files)
+    )  # Use more threads than CPUs due to I/O operations
 
     # Split files into batches for better workload distribution
-    batches = [
-        files[i:i + batch_size] for i in range(0, len(files), batch_size)
-    ]
+    batches = [files[i : i + batch_size] for i in range(0, len(files), batch_size)]
 
     # Process using ThreadPoolExecutor (better for I/O bound tasks)
     start_time = time.time()
@@ -128,9 +131,10 @@ def batch_optimize_image(folder_path: str) -> str:
 
     processing_time = time.time() - start_time
     # Print stats only in non-production environments
-    if os.environ.get('ENV') != 'production':
+    if os.environ.get("ENV") != "production":
         logger.info(
             f"Processed {total_success}/{total_files} images in {processing_time:.2f}s "
-            f"({total_files/processing_time:.1f} img/s)")
+            f"({total_files / processing_time:.1f} img/s)"
+        )
 
     return folder_path

@@ -1,13 +1,17 @@
 from pathlib import Path
-import orjson
-from promptflow.core import tool
 
-from promptflow.core import Prompty, AzureOpenAIModelConfiguration
-from settings import app_settings
+import orjson
 from logger import logger
-from pf_utils import calculate_linear_probabilities, calculate_perplexity, linear_probability_to_score, perplexity_to_score
-from structured_logprobs import add_logprobs
+from pf_utils import (
+    calculate_linear_probabilities,
+    calculate_perplexity,
+    linear_probability_to_score,
+    perplexity_to_score,
+)
+from promptflow.core import AzureOpenAIModelConfiguration, Prompty, tool
 from promptflow.tracing import trace
+from settings import app_settings
+from structured_logprobs import add_logprobs
 
 
 @trace
@@ -25,23 +29,24 @@ async def structured_extraction(ocr_result: str, json_schema: dict):
         "temperature": app_settings.azure_openai.temperature,
         "max_tokens": app_settings.azure_openai.max_tokens,
         "top_p": 1,
+        "top_k": 0,
+        "seed": 42,
         "frequency_penalty": 0,
         "presence_penalty": 0,
         "stop": None,
         "stream": False,
         "logprobs": True,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": json_schema
-        }
+        "response_format": {"type": "json_schema", "json_schema": json_schema},
     }
-    prompty = Prompty.load(source=BASE_DIR / "extract-json.prompty",
-                           model={
-                               "configuration": model_config,
-                               "parameters": parameters,
-                               "response": "all"
-                           })
-    completion = prompty(json_schema=json_schema, ocr_output=ocr_result)
+    prompty = Prompty.load(
+        source=BASE_DIR / "extract-json.prompty",
+        model={
+            "configuration": model_config,
+            "parameters": parameters,
+            "response": "all",
+        },
+    )
+    completion = prompty(ocr_output=ocr_result)
     content = completion.choices[0].message.content
     chat_completion = add_logprobs(completion)
     log_probs = chat_completion.log_probs[0]
@@ -56,5 +61,5 @@ async def structured_extraction(ocr_result: str, json_schema: dict):
     return {
         "result": result,
         "overall_confidence_score": score,
-        "confidence": linear_scores
+        "confidence": linear_scores,
     }
