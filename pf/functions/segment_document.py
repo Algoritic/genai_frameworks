@@ -1,16 +1,21 @@
-from pathlib import Path
 import re
+from collections import defaultdict
+from pathlib import Path
 from typing import List
 
-from openai import BaseModel
 import orjson
 from logger import logger
-from promptflow.core import Prompty, AzureOpenAIModelConfiguration
-from settings import app_settings
-from pf_utils import calculate_linear_probabilities, calculate_perplexity, linear_probability_to_score, perplexity_to_score
-from structured_logprobs import add_logprobs
+from openai import BaseModel
+from pf_utils import (
+    calculate_linear_probabilities,
+    calculate_perplexity,
+    linear_probability_to_score,
+    perplexity_to_score,
+)
+from promptflow.core import AzureOpenAIModelConfiguration, Prompty
 from promptflow.tracing import trace
-from collections import defaultdict
+from settings import app_settings
+from structured_logprobs import add_logprobs
 
 
 class Segment(BaseModel):
@@ -20,6 +25,7 @@ class Segment(BaseModel):
     reasoning: str
 
 
+@trace
 def group_tags(data):
     grouped = defaultdict(lambda: {"indices": [], "seconds": set()})
 
@@ -31,24 +37,23 @@ def group_tags(data):
     result = []
     for key, info in grouped.items():
         indices = info["indices"]
-        result.append({
-            "documentName":
-            key,
-            "indices":
-            indices,
-            "range": (indices[0], indices[-1]) if len(indices) > 1 else
-            (indices[0], indices[0]),
-            "subDocumentNames":
-            sorted(info["seconds"]) if info["seconds"] else []
-        })
+        result.append(
+            {
+                "documentName": key,
+                "indices": indices,
+                "range": (indices[0], indices[-1])
+                if len(indices) > 1
+                else (indices[0], indices[0]),
+                "subDocumentNames": sorted(info["seconds"]) if info["seconds"] else [],
+            }
+        )
 
     return result
 
 
 @trace
-#pages is list of extracted text from pdf, page by page
+# pages is list of extracted text from pdf, page by page
 def segment(json_schema: dict, pages=List[str]):
-
     logger.info(f"Segmenting {len(pages)} pages")
 
     BASE_DIR = Path(__file__).absolute().parent.parent / "flows"
@@ -65,45 +70,48 @@ def segment(json_schema: dict, pages=List[str]):
         "temperature": app_settings.azure_openai.temperature,
         "max_tokens": app_settings.azure_openai.max_tokens,
         "top_p": 1,
+        "top_k": 0,
+        "seed": 42,
         "frequency_penalty": 0,
         "presence_penalty": 0,
         "stop": None,
         "stream": False,
         "logprobs": True,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": json_schema
-        }
+        "response_format": {"type": "json_schema", "json_schema": json_schema},
     }
 
-    prompty = Prompty.load(source=BASE_DIR / "classify.prompty",
-                           model={
-                               "configuration": model_config,
-                               "parameters": parameters,
-                               "response": "all"
-                           })
+    prompty = Prompty.load(
+        source=BASE_DIR / "classify.prompty",
+        model={
+            "configuration": model_config,
+            "parameters": parameters,
+            "response": "all",
+        },
+    )
     metrics = [None] * len(pages)
     page_tags = [None] * len(pages)
     for idx, page in enumerate(pages):
-
         current_page_number = idx + 1
         logger.info(
             f"Analyzing transition between page {idx} and page {current_page_number}"
         )
 
-        prev_page_doc_name, prev_page_sub_doc_name = page_tags[
-            idx - 1] if idx > 0 else (None, None)
+        prev_page_doc_name, prev_page_sub_doc_name = (
+            page_tags[idx - 1] if idx > 0 else (None, None)
+        )
 
-        #fallback to previous page tag if page with the word "CC" is found
+        # fallback to previous page tag if page with the word "CC" is found
         pattern = r"(?<!\w)[cC]\s*\.?\s*[cC](?=\b|[^a-zA-Z])"
         matches = re.findall(pattern, page)
         if len(matches) > 0:
             page_tags.insert(idx, (prev_page_doc_name, prev_page_sub_doc_name))
             continue
 
-        completion = prompty(page_content=page,
-                             prev_doc_name=prev_page_doc_name,
-                             prev_doc_sub_name=prev_page_sub_doc_name)
+        completion = prompty(
+            page_content=page,
+            prev_doc_name=prev_page_doc_name,
+            prev_doc_sub_name=prev_page_sub_doc_name,
+        )
         content = completion.choices[0].message.content
         chat_completion = add_logprobs(completion)
         log_probs = chat_completion.log_probs[0]
@@ -115,14 +123,12 @@ def segment(json_schema: dict, pages=List[str]):
         # result_string = ''.join(map(str, output))
         result = orjson.loads(content)
         page_tags[idx] = (result["document_name"], result["sub_document_name"])
-        metrics[idx] = {
-            "overall_confidence_score": score,
-            "confidence": linear_scores
-        }
+        metrics[idx] = {"overall_confidence_score": score, "confidence": linear_scores}
 
         logger.info(f"Page {current_page_number} tags: {result}")
 
-    grouped_tags = group_tags([(page_tags[i][0], page_tags[i][1])
-                               for i in range(len(page_tags))])
+    grouped_tags = group_tags(
+        [(page_tags[i][0], page_tags[i][1]) for i in range(len(page_tags))]
+    )
 
     return {"tags": grouped_tags, "metrics": metrics}

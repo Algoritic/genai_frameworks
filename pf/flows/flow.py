@@ -1,7 +1,7 @@
-import os
 from pathlib import Path
+
+from promptflow.core import AzureOpenAIModelConfiguration, Prompty
 from promptflow.tracing import trace
-from promptflow.core import Prompty, AzureOpenAIModelConfiguration
 from settings import app_settings
 
 BASE_DIR = Path(__file__).absolute().parent
@@ -20,6 +20,8 @@ def chat(question: str = "What's the capital of France?") -> str:
         "temperature": app_settings.azure_openai.temperature,
         "max_tokens": app_settings.azure_openai.max_tokens,
         "top_p": 1,
+        "top_k": 0,
+        "seed": 42,
         "frequency_penalty": 0,
         "presence_penalty": 0,
         "stop": None,
@@ -34,19 +36,21 @@ def chat(question: str = "What's the capital of France?") -> str:
                     "properties": {
                         "name": {
                             "type": "string",
-                            "description": "Name of the country"
+                            "description": "Name of the country",
                         },
-                    }
-                }
-            }
-        }
+                    },
+                },
+            },
+        },
     }
     """Flow entry function."""
-    prompty = Prompty.load(source=BASE_DIR / "sample-flow.prompty",
-                           model={
-                               "configuration": model_config,
-                               "parameters": parameters,
-                           })
+    prompty = Prompty.load(
+        source=BASE_DIR / "sample-flow.prompty",
+        model={
+            "configuration": model_config,
+            "parameters": parameters,
+        },
+    )
     output = prompty(question=question)
     return output
 

@@ -1,17 +1,22 @@
-from pathlib import Path
 import re
+from pathlib import Path
+
 import orjson
-from promptflow.tracing import trace
 import pandas as pd
-from promptflow.core import Prompty, AzureOpenAIModelConfiguration
-from pf_utils import calculate_linear_probabilities, calculate_perplexity, linear_probability_to_score, perplexity_to_score
+from pf_utils import (
+    calculate_linear_probabilities,
+    calculate_perplexity,
+    linear_probability_to_score,
+    perplexity_to_score,
+)
+from promptflow.core import AzureOpenAIModelConfiguration, Prompty
+from promptflow.tracing import trace
 from settings import app_settings
 from structured_logprobs import add_logprobs
 
 
 @trace
 def merge_docs(comparison_key_sets: dict):
-
     BASE_DIR = Path(__file__).absolute().parent.parent / "flows"
 
     model_config: AzureOpenAIModelConfiguration = {
@@ -26,22 +31,24 @@ def merge_docs(comparison_key_sets: dict):
         "temperature": app_settings.azure_openai.temperature,
         "max_tokens": app_settings.azure_openai.max_tokens,
         "top_p": 1,
+        "top_k": 0,
+        "seed": 42,
         "frequency_penalty": 0,
         "presence_penalty": 0,
         "stop": None,
         "logprobs": True,
         "stream": False,
-        "response_format": {
-            "type": "json_object"
-        }
+        "response_format": {"type": "json_object"},
     }
 
-    prompty = Prompty.load(source=BASE_DIR / "comparison.prompty",
-                           model={
-                               "configuration": model_config,
-                               "parameters": parameters,
-                               "response": "all"
-                           })
+    prompty = Prompty.load(
+        source=BASE_DIR / "comparison.prompty",
+        model={
+            "configuration": model_config,
+            "parameters": parameters,
+            "response": "all",
+        },
+    )
 
     completion = prompty(comparison_key_sets=comparison_key_sets)
     result = completion.choices[0].message.content
@@ -55,13 +62,13 @@ def merge_docs(comparison_key_sets: dict):
     return {
         "result": orjson.loads(result),
         "overall_confidence_score": score,
-        "confidence": linear_scores
+        "confidence": linear_scores,
     }
 
 
 def normalize(value):
     if isinstance(value, str):
-        return re.sub(r'[^a-z0-9]', '', value.lower())
+        return re.sub(r"[^a-z0-9]", "", value.lower())
     return value
 
 
@@ -71,7 +78,7 @@ def to_list(val):
     return [normalize(val)]
 
 
-def compare_json_documents(data: dict, fact_source='WOLOC') -> pd.DataFrame:
+def compare_json_documents(data: dict, fact_source="WOLOC") -> pd.DataFrame:
     all_docs = set()
     all_keys = data.keys()
 
@@ -80,7 +87,7 @@ def compare_json_documents(data: dict, fact_source='WOLOC') -> pd.DataFrame:
         all_docs.update(subdocs.keys())
 
     all_docs = sorted(all_docs)
-    columns = ['keys'] + all_docs + ['invalidSources', 'isMatched']
+    columns = ["keys"] + all_docs + ["invalidSources", "isMatched"]
     result_rows = []
 
     for key in all_keys:
@@ -94,9 +101,9 @@ def compare_json_documents(data: dict, fact_source='WOLOC') -> pd.DataFrame:
         for doc in all_docs:
             val = data[key].get(doc)
             if isinstance(val, list):
-                val_str = ', '.join(val)
+                val_str = ", ".join(val)
             elif val is None:
-                val_str = ''
+                val_str = ""
             else:
                 val_str = str(val)
             row.append(val_str)
@@ -107,7 +114,7 @@ def compare_json_documents(data: dict, fact_source='WOLOC') -> pd.DataFrame:
                     invalid_sources.append(doc)
                     is_matched = False
 
-        row.append(', '.join(invalid_sources))
+        row.append(", ".join(invalid_sources))
         row.append(is_matched)
         result_rows.append(row)
 
@@ -119,10 +126,10 @@ def compare_json_documents(data: dict, fact_source='WOLOC') -> pd.DataFrame:
 def compare_documents(comparison_key_sets: dict):
     merged_payload = merge_docs(comparison_key_sets)
     print(merged_payload)
-    comparison_result = compare_json_documents(merged_payload['result'])
-    #return pandas df to json dict
+    comparison_result = compare_json_documents(merged_payload["result"])
+    # return pandas df to json dict
     return {
         "result": comparison_result.to_dict(orient="records"),
-        "overall_confidence_score": merged_payload['overall_confidence_score'],
-        "confidence": merged_payload['confidence']
+        "overall_confidence_score": merged_payload["overall_confidence_score"],
+        "confidence": merged_payload["confidence"],
     }
