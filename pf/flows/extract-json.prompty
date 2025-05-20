@@ -3,8 +3,6 @@ name: Extract JSON
 model:
   api: chat
 inputs:
-  json_schema:
-    type: string
   ocr_output:
     type: string
 ---
@@ -13,9 +11,9 @@ system:
 You are a professional document extractor. Your job is to extract the information from the documents and return a json object.
 
 user:
-You are provided with the content of a series of documents. Extract and consolidate them based on the given json schema.
-Return in JSON only.
-The json schema is as follows:
-{{json_schema}}
+You are a professional document extractor. Your job is to extract the information from the documents and return a json object.
+You are provided with the content of a series of documents. Take a deep breath, extract and consolidate them based on the given json schema.
+Return in JSON only. Do not hallucinate. If you cannot extract or the field is empty, use N/A.
+
 The documents are as follows:
 {{ocr_output}}
