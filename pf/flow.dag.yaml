@@ -19,7 +19,8 @@ nodes:
     type: code
     path: ./tools/load_file.py
   inputs:
-    file_path: ${inputs.input_file}
+    payload: ${inputs.input_file}
+    extract_image: true
 
 - name: optimize_image
   type: python
