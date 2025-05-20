@@ -1,8 +1,10 @@
 from fastapi import FastAPI
-from routes.extraction import extraction_router
-from routes.classification import classification_router
-from routes.comparison import comparison_router
 from promptflow.tracing import start_trace
+
+from api.routes.classification import classification_router
+from api.routes.comparison import comparison_router
+from api.routes.extraction import extraction_router
+from pf.logger import logger
 
 
 def create_app():
@@ -22,6 +24,13 @@ def create_app():
     app.include_router(extraction_router)
     app.include_router(classification_router)
     app.include_router(comparison_router)
+
+    # add echo route
+    @app.post("/callback")
+    # echo the payload
+    async def callback(data: dict):
+        logger.debug(f"Received callback data: {data}")
+        return data
 
     return app
 
